@@ -3,6 +3,7 @@ import { createContext, useContext, useState } from 'react';
 import { auth as authApi, setToken, clearAuth, getStoredUser, setStoredUser } from './services/api';
 import HomePage from './pages/HomePage';
 import TasksPage from './pages/TasksPage';
+import MapPage from './pages/MapPage';
 import ReportPage from './pages/ReportPage';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
@@ -43,6 +44,9 @@ function BottomNav() {
       <NavLink to="/tasks" className={({ isActive }) => isActive ? 'active' : ''}>
         <span className="nav-icon">📋</span>Tasks
       </NavLink>
+      <NavLink to="/map" className={({ isActive }) => isActive ? 'active' : ''}>
+        <span className="nav-icon">🗺️</span>Map
+      </NavLink>
       <NavLink to="/report" className={({ isActive }) => isActive ? 'active' : ''}>
         <span className="nav-icon">🆘</span>Report
       </NavLink>
@@ -73,6 +77,7 @@ export default function App() {
           <Route element={<ProtectedLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/tasks" element={<TasksPage />} />
+            <Route path="/map" element={<MapPage />} />
             <Route path="/report" element={<ReportPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>

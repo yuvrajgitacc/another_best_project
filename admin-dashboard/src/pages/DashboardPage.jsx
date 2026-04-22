@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { analytics } from '../services/api';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState(null);
@@ -47,6 +49,104 @@ export default function DashboardPage() {
     setAiLoading(false);
   }
 
+  function exportPDF() {
+    const doc = new jsPDF();
+    const now = new Date().toLocaleString();
+    const imp = impact || {};
+    const ss = summary || {};
+
+    // Title
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, 210, 40, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.text('SmartAlloc Impact Report', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${now}`, 14, 30);
+    doc.text('Smart Resource Allocation Platform', 14, 36);
+
+    // Summary Stats
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(14);
+    doc.text('Overview', 14, 52);
+
+    doc.autoTable({
+      startY: 56,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Total Needs', String(ss.total_needs || 0)],
+        ['Open Needs', String(ss.open_needs || 0)],
+        ['Resolved Needs', String(ss.resolved_needs || 0)],
+        ['Total Volunteers', String(ss.total_volunteers || 0)],
+        ['Active Volunteers', String(ss.active_volunteers || 0)],
+        ['People Helped', String(ss.people_helped || 0)],
+        ['Avg Response Time', ss.avg_response_time_hours ? `${ss.avg_response_time_hours} hours` : 'N/A'],
+        ['Resolution Rate', ss.total_needs > 0 ? `${Math.round((ss.resolved_needs / ss.total_needs) * 100)}%` : 'N/A'],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    // 7-Day Impact
+    let y = doc.lastAutoTable.finalY + 12;
+    doc.setFontSize(14);
+    doc.text('7-Day Impact Summary', 14, y);
+    y += 4;
+
+    doc.autoTable({
+      startY: y,
+      head: [['Metric', 'Last 7 Days']],
+      body: [
+        ['People Helped', String(imp.people_helped || 0)],
+        ['Needs Resolved', String(imp.needs_resolved || 0)],
+        ['Needs Created', String(imp.needs_created || 0)],
+        ['Assignments Completed', String(imp.assignments_completed || 0)],
+        ['Critical Open Needs', String(imp.critical_open_needs || 0)],
+        ['Resolution Rate', `${imp.resolution_rate || 0}%`],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [16, 185, 129] },
+    });
+
+    // Categories
+    if (categories.length > 0) {
+      y = doc.lastAutoTable.finalY + 12;
+      doc.setFontSize(14);
+      doc.text('Needs by Category', 14, y);
+      y += 4;
+
+      doc.autoTable({
+        startY: y,
+        head: [['Category', 'Total', 'Open', 'Resolved']],
+        body: categories.map(c => [c.category, String(c.count), String(c.open_count), String(c.resolved_count)]),
+        theme: 'striped',
+        headStyles: { fillColor: [168, 85, 247] },
+      });
+    }
+
+    // AI Summary
+    if (aiSummary?.summary) {
+      y = doc.lastAutoTable.finalY + 12;
+      doc.setFontSize(14);
+      doc.text('AI Situation Analysis', 14, y);
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      const lines = doc.splitTextToSize(aiSummary.summary, 180);
+      doc.text(lines, 14, y + 6);
+    }
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`SmartAlloc | Page ${i} of ${pageCount} | ${now}`, 14, 290);
+    }
+
+    doc.save(`SmartAlloc_Impact_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+  }
+
   if (loading) {
     return (
       <>
@@ -86,7 +186,11 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => loadData()}>↻ Refresh</button>
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="btn btn-outline" onClick={exportPDF} title="Download PDF Report">📄 Export PDF</button>
+          <button className="btn btn-primary" onClick={() => loadData()}>↻ Refresh</button>
+        </div>
       </div>
 
       <div className="page-body">
