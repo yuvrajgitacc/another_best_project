@@ -101,6 +101,7 @@ async def extract_from_image(
 
     return OCRExtractResponse(
         raw_text=result.get("raw_text", ""),
+        original_language=result.get("original_language"),
         structured_data=result.get("structured_data"),
         confidence=result.get("confidence", 0.0),
     )

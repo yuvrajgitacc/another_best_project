@@ -399,6 +399,7 @@ class BroadcastResponse(BaseModel):
 
 class OCRExtractResponse(BaseModel):
     raw_text: str
+    original_language: Optional[str] = None
     structured_data: Optional["OCRStructuredData"] = None
     confidence: float = Field(ge=0.0, le=1.0)
 

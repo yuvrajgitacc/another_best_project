@@ -170,6 +170,7 @@ export const analytics = {
   getTimeline: (days = 30) => apiFetch(`/analytics/timeline?days=${days}`),
   getResponseTimes: () => apiFetch('/analytics/response-times'),
   getAISummary: () => apiFetch('/analytics/ai-summary'),
+  getImpact: (days = 7) => apiFetch(`/analytics/impact?days=${days}`),
 };
 
 // ============================================================

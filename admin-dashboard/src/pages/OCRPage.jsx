@@ -119,6 +119,7 @@ export default function OCRPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px', color: 'var(--text-primary)' }}>
               <div><strong>Title:</strong> {createdNeed.title}</div>
               <div><strong>Category:</strong> {catIcons[createdNeed.category]} {createdNeed.category}</div>
+              {createdNeed.ocr_raw_text && <div><strong>Source:</strong> 🌐 Multilingual OCR → English</div>}
               <div><strong>Urgency:</strong> {'🔴'.repeat(createdNeed.urgency)}{'⚪'.repeat(5 - createdNeed.urgency)} ({createdNeed.urgency}/5)</div>
               <div><strong>People:</strong> {createdNeed.people_affected}</div>
               <div><strong>Address:</strong> {createdNeed.address || '—'}</div>
@@ -174,7 +175,7 @@ export default function OCRPage() {
                     <span style={{ fontSize: '24px' }}>
                       {result.confidence >= 0.8 ? '✅' : result.confidence >= 0.5 ? '⚠️' : '❌'}
                     </span>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700 }}>Confidence: {Math.round(result.confidence * 100)}%</div>
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                         {result.confidence >= 0.8 ? 'High quality extraction' :
@@ -183,6 +184,11 @@ export default function OCRPage() {
                          'Extraction failed — API limit or poor image quality'}
                       </div>
                     </div>
+                    {result.original_language && (
+                      <div style={{ padding: '4px 10px', background: 'rgba(168,85,247,0.15)', borderRadius: '8px', fontSize: '12px', color: '#A855F7', fontWeight: 600 }}>
+                        🌐 {result.original_language}
+                      </div>
+                    )}
                   </div>
                 </div>
 

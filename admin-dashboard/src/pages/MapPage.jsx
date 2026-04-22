@@ -1,25 +1,39 @@
 import { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { needs as needsApi } from '../services/api';
+import 'leaflet.heat';
+import { needs as needsApi, analytics } from '../services/api';
 
 export default function MapPage() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersLayerRef = useRef(null);
+  const heatLayerRef = useRef(null);
   const [mapNeeds, setMapNeeds] = useState([]);
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [heatmapData, setHeatmapData] = useState([]);
+  const pollRef = useRef(null);
 
   useEffect(() => { loadMapData(); }, [filter]);
 
+  // Auto-refresh map every 30s
+  useEffect(() => {
+    pollRef.current = setInterval(() => { loadMapData(); }, 30000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [filter]);
+
   async function loadMapData() {
-    setLoading(true);
     try {
       const params = {};
       if (filter) params.category = filter;
-      const data = await needsApi.getForMap(params);
+      const [data, heatData] = await Promise.all([
+        needsApi.getForMap(params),
+        analytics.getHeatmap(params),
+      ]);
       setMapNeeds(data);
+      setHeatmapData(heatData);
     } catch (err) {
       console.error('Failed to load map data:', err);
     }
@@ -41,11 +55,9 @@ export default function MapPage() {
       maxZoom: 19,
     }).addTo(map);
 
-    // Create a layer group for markers
     markersLayerRef.current = L.layerGroup().addTo(map);
     mapInstanceRef.current = map;
 
-    // Force a resize after mount to fix grey tiles
     setTimeout(() => { map.invalidateSize(); }, 200);
 
     return () => {
@@ -53,6 +65,7 @@ export default function MapPage() {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
         markersLayerRef.current = null;
+        heatLayerRef.current = null;
       }
     };
   }, []);
@@ -63,7 +76,6 @@ export default function MapPage() {
     const markersLayer = markersLayerRef.current;
     if (!map || !markersLayer) return;
 
-    // Clear existing markers
     markersLayer.clearLayers();
 
     const catColors = {
@@ -90,11 +102,11 @@ export default function MapPage() {
       });
 
       marker.bindPopup(`
-        <div style="font-family: Inter, sans-serif; min-width: 200px;">
+        <div style="font-family: Inter, sans-serif; min-width: 220px;">
           <h4 style="margin: 0 0 4px; font-size: 14px;">${catIcons[need.category] || '📋'} ${need.title}</h4>
           <p style="margin: 0; color: #666; font-size: 12px;">
             Category: <strong>${need.category}</strong><br/>
-            Urgency: <strong>${need.urgency}/5</strong><br/>
+            Urgency: <strong>${'🔴'.repeat(need.urgency)}${'⚪'.repeat(5 - need.urgency)}</strong> (${need.urgency}/5)<br/>
             People: <strong>${need.people_affected}</strong><br/>
             Status: <strong>${need.status}</strong>
           </p>
@@ -103,26 +115,52 @@ export default function MapPage() {
 
       markersLayer.addLayer(marker);
 
-      // Pulse ring for high urgency
       if (need.urgency >= 4) {
         const pulse = L.circleMarker([need.latitude, need.longitude], {
-          radius: radius + 8,
-          fillColor: color,
-          color: color,
-          weight: 1,
-          opacity: 0.3,
-          fillOpacity: 0.1,
+          radius: radius + 8, fillColor: color, color: color,
+          weight: 1, opacity: 0.3, fillOpacity: 0.1,
         });
         markersLayer.addLayer(pulse);
       }
     });
 
-    // Fit bounds if we have data
     if (mapNeeds.length > 0) {
       const bounds = L.latLngBounds(mapNeeds.map(n => [n.latitude, n.longitude]));
       map.fitBounds(bounds, { padding: [50, 50] });
     }
   }, [mapNeeds]);
+
+  // Toggle heatmap layer
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Remove existing heatmap
+    if (heatLayerRef.current) {
+      map.removeLayer(heatLayerRef.current);
+      heatLayerRef.current = null;
+    }
+
+    if (showHeatmap && heatmapData.length > 0) {
+      const heatPoints = heatmapData.map(p => [
+        p.latitude, p.longitude, p.intensity || 50
+      ]);
+
+      heatLayerRef.current = L.heatLayer(heatPoints, {
+        radius: 35,
+        blur: 25,
+        maxZoom: 17,
+        max: 100,
+        gradient: {
+          0.2: '#2563EB',
+          0.4: '#06B6D4',
+          0.6: '#10B981',
+          0.8: '#F97316',
+          1.0: '#EF4444',
+        },
+      }).addTo(map);
+    }
+  }, [showHeatmap, heatmapData]);
 
   const categories = ['medical', 'food', 'shelter', 'water', 'rescue', 'education', 'clothing', 'sanitation'];
   const catIcons = { medical: '🏥', food: '🍚', shelter: '🏠', water: '💧', rescue: '🚨', education: '📚', clothing: '👕', sanitation: '🧹' };
@@ -134,9 +172,18 @@ export default function MapPage() {
           <h2>🗺️ Live Crisis Map</h2>
           <div className="subtitle">
             {loading ? 'Loading...' : `${mapNeeds.length} active needs on map`}
+            <span style={{ marginLeft: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>🟢 Auto-refresh 30s</span>
           </div>
         </div>
-        <button className="btn btn-primary" onClick={loadMapData}>↻ Refresh</button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            className={`btn btn-sm ${showHeatmap ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setShowHeatmap(!showHeatmap)}
+          >
+            🔥 {showHeatmap ? 'Hide' : 'Show'} Heatmap
+          </button>
+          <button className="btn btn-primary" onClick={loadMapData}>↻ Refresh</button>
+        </div>
       </div>
 
       <div className="page-body">
@@ -190,9 +237,12 @@ export default function MapPage() {
               {cat}
             </span>
           ))}
-          <span style={{ marginLeft: '16px' }}>
-            ○ Large circle = High urgency (4-5)
-          </span>
+          <span style={{ marginLeft: '16px' }}>○ Large circle = High urgency</span>
+          {showHeatmap && (
+            <span style={{ marginLeft: '8px' }}>
+              🔥 Heatmap: <span style={{ color: '#2563EB' }}>Low</span> → <span style={{ color: '#F97316' }}>Med</span> → <span style={{ color: '#EF4444' }}>High</span> density
+            </span>
+          )}
         </div>
       </div>
     </>

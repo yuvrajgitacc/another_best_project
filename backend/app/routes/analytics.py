@@ -266,3 +266,90 @@ async def get_ai_summary(
 
     summary = await gemini_service.analyze_needs_summary(needs_data)
     return {"summary": summary, "needs_analyzed": len(needs_data)}
+
+
+@router.get("/impact")
+async def get_impact_stats(
+    days: int = Query(default=7, ge=1, le=90),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Impact Dashboard stats — shows what was accomplished in the last N days.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+    # Needs resolved in period
+    needs_resolved = db.query(func.count(Need.id)).filter(
+        Need.status == "resolved",
+        Need.resolved_at >= cutoff,
+    ).scalar() or 0
+
+    # Total needs created in period
+    needs_created = db.query(func.count(Need.id)).filter(
+        Need.created_at >= cutoff,
+    ).scalar() or 0
+
+    # People helped in period (from resolved needs)
+    people_helped = db.query(func.sum(Need.people_affected)).filter(
+        Need.status == "resolved",
+        Need.resolved_at >= cutoff,
+    ).scalar() or 0
+
+    # Assignments completed in period
+    assignments_completed = db.query(func.count(Assignment.id)).filter(
+        Assignment.status == "completed",
+        Assignment.completed_at >= cutoff,
+    ).scalar() or 0
+
+    # Average response time in period
+    completed = db.query(Assignment).filter(
+        Assignment.status == "completed",
+        Assignment.completed_at >= cutoff,
+        Assignment.completed_at.isnot(None),
+        Assignment.assigned_at.isnot(None),
+    ).all()
+
+    avg_response_hours = 0
+    if completed:
+        total_hours = sum(
+            (a.completed_at - a.assigned_at).total_seconds() / 3600
+            for a in completed if a.assigned_at and a.completed_at
+        )
+        avg_response_hours = round(total_hours / len(completed), 1) if completed else 0
+
+    # Active volunteers in period
+    active_vols = db.query(func.count(Volunteer.id)).filter(
+        Volunteer.availability.in_(["available", "busy"]),
+    ).scalar() or 0
+
+    # Total volunteer tasks completed (all time)
+    total_vol_tasks = db.query(func.sum(Volunteer.tasks_completed)).scalar() or 0
+
+    # Top categories in period
+    top_cats = db.query(
+        Need.category,
+        func.count(Need.id).label("count"),
+    ).filter(
+        Need.created_at >= cutoff,
+    ).group_by(Need.category).order_by(func.count(Need.id).desc()).limit(3).all()
+
+    # Currently open critical needs (urgency >= 4)
+    critical_open = db.query(func.count(Need.id)).filter(
+        Need.status == "open",
+        Need.urgency >= 4,
+    ).scalar() or 0
+
+    return {
+        "period_days": days,
+        "needs_created": needs_created,
+        "needs_resolved": needs_resolved,
+        "people_helped": people_helped,
+        "assignments_completed": assignments_completed,
+        "avg_response_hours": avg_response_hours,
+        "active_volunteers": active_vols,
+        "total_volunteer_tasks": total_vol_tasks,
+        "critical_open_needs": critical_open,
+        "top_categories": [{"category": cat, "count": cnt} for cat, cnt in top_cats],
+        "resolution_rate": round((needs_resolved / needs_created * 100), 1) if needs_created > 0 else 0,
+    }

@@ -107,18 +107,21 @@ async def extract_text_from_image(image_path: str) -> Dict[str, Any]:
         prompt = """You are an OCR + data extraction system for an NGO volunteer coordination platform.
 
 Analyze this image of a paper survey or field report and extract ALL text from it.
+The text may be written in ANY language including Hindi, Gujarati, Marathi, Urdu, or English.
+Regardless of the original language, ALL output fields must be in ENGLISH.
 
 Then, from the extracted text, identify and structure the following information:
 
 Return your response ONLY as a JSON object (no markdown, no code blocks) with this exact structure:
 {
-    "raw_text": "the complete extracted text from the image",
+    "raw_text": "the complete extracted text from the image, transliterated/translated to English",
+    "original_language": "detected language of the handwriting (e.g. Hindi, Gujarati, English, Mixed)",
     "structured_data": {
-        "title": "a short summary title of the need/issue (max 100 chars)",
-        "description": "detailed description of the need",
+        "title": "a short English summary title of the need/issue (max 100 chars)",
+        "description": "detailed English description of the need",
         "category": "one of: medical, food, shelter, rescue, education, clothing, sanitation, water, other",
         "urgency": 3,
-        "location_text": "any location/address mentioned",
+        "location_text": "any location/address mentioned (keep original place names)",
         "people_affected": 1,
         "key_issues": ["issue1", "issue2"]
     },
@@ -129,6 +132,7 @@ Rules:
 - urgency is 1-5 (1=low, 5=critical/life-threatening)
 - people_affected should be a number, default to 1 if unclear
 - Extract ALL readable text, even if partially obscured
+- If text is in Hindi/Gujarati/Marathi, translate the meaning to English but keep location names as-is
 - If the image is not a survey/report, still extract any text and set category to "other"
 - confidence is 0.0-1.0 based on how clear and complete the extraction is"""
 
