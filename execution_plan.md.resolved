@@ -1,0 +1,547 @@
+# 🚀 Smart Resource Allocation — Execution Plan
+
+## **Project: Data-Driven Volunteer Coordination for Social Impact**
+
+> **Codename:** `PromptWars` | **Hackathon Duration:** 48 Hours
+
+---
+
+## 1. Project Vision (30-Second Elevator Pitch)
+
+> *"NGOs drown in paper. Volunteers sit idle. People suffer waiting. Our platform digitizes scattered field data with OCR, visualizes community needs on a real-time crisis map, and uses a smart matching algorithm to instantly deploy the right volunteer to the right place — cutting response time from days to minutes."*
+
+---
+
+## 2. Architecture Overview
+
+```mermaid
+graph TB
+    subgraph Frontend ["🖥️ Frontend (React + Vite)"]
+        A[Volunteer App] --> |Report Need / Upload Survey| API
+        B[Admin Dashboard] --> |View Map & Manage| API
+        C[OCR Module] --> |Tesseract.js| A
+    end
+
+    subgraph Backend ["⚙️ Backend (Python / FastAPI)"]
+        API[REST API] --> AUTH[Auth Module]
+        API --> MATCH[Matching Engine]
+        API --> NLP[NLP Categorizer]
+        API --> GEO[Geolocation Service]
+    end
+
+    subgraph Database ["🗄️ Database (MongoDB)"]
+        DB1[(Volunteers)]
+        DB2[(Needs / Requests)]
+        DB3[(Assignments)]
+        DB4[(Survey Data)]
+    end
+
+    API --> DB1
+    API --> DB2
+    API --> DB3
+    API --> DB4
+    MATCH --> DB1
+    MATCH --> DB2
+
+    style Frontend fill:#1a1a2e,stroke:#e94560,color:#fff
+    style Backend fill:#16213e,stroke:#0f3460,color:#fff
+    style Database fill:#0f3460,stroke:#533483,color:#fff
+```
+
+---
+
+## 3. Tech Stack (Final)
+
+| Layer | Technology | Why? |
+|-------|-----------|------|
+| **Frontend** | React 18 + Vite | Fast dev, hot reload, component-based |
+| **Styling** | Vanilla CSS + CSS Variables | Full control, no dependency bloat |
+| **Maps** | Leaflet.js + OpenStreetMap | Free, no API key needed, great for hackathons |
+| **OCR** | Tesseract.js (browser-side) | No server cost, runs in-browser, instant demo |
+| **Backend** | Python + FastAPI | Blazing fast, auto-docs (Swagger), async support |
+| **Database** | MongoDB (via Motor - async) | Schema-flexible for varied survey data |
+| **Auth** | JWT (simple token-based) | Lightweight, hackathon-appropriate |
+| **Notifications** | Browser Push API / Toast UI | Simple, no third-party dependency |
+| **Deployment** | Render (Backend) + Vercel (Frontend) | Free tier, instant deploy |
+
+---
+
+## 4. Feature Breakdown & Priority
+
+### 🔴 P0 — Must Have (Core Demo)
+
+| # | Feature | Description |
+|---|---------|-------------|
+| 1 | **Need Reporting Form** | Volunteers submit community needs (category, location, urgency, description) |
+| 2 | **Crisis Map Dashboard** | Interactive Leaflet map showing all needs as color-coded markers |
+| 3 | **Volunteer Registration** | Sign up with skills, location (auto-detect GPS), availability |
+| 4 | **Smart Matching Algorithm** | Auto-assign nearest + most-skilled + available volunteer to a need |
+| 5 | **OCR Survey Upload** | Upload paper survey photo → extract text → auto-fill need form |
+| 6 | **Task Assignment Panel** | Admin can view matches, approve/override, track status |
+
+### 🟡 P1 — Should Have (Polish)
+
+| # | Feature | Description |
+|---|---------|-------------|
+| 7 | **Filters & Search** | Filter map by category (Medical, Food, Shelter), urgency level |
+| 8 | **Volunteer Status Tracking** | Assigned / En Route / Completed status flow |
+| 9 | **Analytics Dashboard** | Charts showing needs by category, response times, regional heatmap |
+| 10 | **Real-time Notifications** | Toast/push alerts when volunteer gets assigned a task |
+
+### 🟢 P2 — Nice to Have (Wow Factor)
+
+| # | Feature | Description |
+|---|---------|-------------|
+| 11 | **NLP Auto-Categorization** | Auto-detect need category from free-text description |
+| 12 | **Urgency Scoring AI** | Auto-score urgency 1-5 based on keywords |
+| 13 | **Route Optimization** | Show best route for volunteer to reach the need location |
+| 14 | **Multi-language OCR** | Hindi + English paper survey support |
+
+---
+
+## 5. Database Schema (MongoDB Collections)
+
+### `volunteers`
+```json
+{
+  "_id": "ObjectId",
+  "name": "Rahul Sharma",
+  "email": "rahul@example.com",
+  "phone": "+91-9876543210",
+  "password_hash": "bcrypt_hash",
+  "role": "volunteer",
+  "skills": ["medical", "driving", "cooking"],
+  "has_vehicle": true,
+  "vehicle_type": "bike",
+  "location": {
+    "type": "Point",
+    "coordinates": [72.8777, 19.0760]
+  },
+  "availability": "available",
+  "current_task_id": null,
+  "tasks_completed": 12,
+  "rating": 4.5,
+  "created_at": "2026-04-22T14:00:00Z"
+}
+```
+
+### `needs`
+```json
+{
+  "_id": "ObjectId",
+  "reported_by": "volunteer_id",
+  "title": "5 people with fever in Gokuldham Society",
+  "description": "Elderly residents showing high fever symptoms for 2 days",
+  "category": "medical",
+  "urgency": 5,
+  "status": "open",
+  "location": {
+    "type": "Point",
+    "coordinates": [72.8345, 19.1234]
+  },
+  "address": "Gokuldham Society, Sector 5, Mumbai",
+  "people_affected": 5,
+  "source": "ocr_upload",
+  "assigned_volunteer_id": null,
+  "created_at": "2026-04-22T14:00:00Z",
+  "resolved_at": null
+}
+```
+
+### `assignments`
+```json
+{
+  "_id": "ObjectId",
+  "need_id": "need_object_id",
+  "volunteer_id": "volunteer_object_id",
+  "status": "assigned",
+  "match_score": 92.5,
+  "distance_km": 2.3,
+  "assigned_at": "2026-04-22T14:05:00Z",
+  "accepted_at": null,
+  "completed_at": null,
+  "feedback": null
+}
+```
+
+---
+
+## 6. API Design (FastAPI Endpoints)
+
+### Auth
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/auth/register` | Register volunteer/admin |
+| `POST` | `/api/auth/login` | Login → JWT token |
+| `GET` | `/api/auth/me` | Get current user profile |
+
+### Needs
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/needs` | Report a new community need |
+| `GET` | `/api/needs` | List all needs (with filters: category, urgency, status) |
+| `GET` | `/api/needs/:id` | Get single need detail |
+| `PATCH` | `/api/needs/:id` | Update need status |
+| `DELETE` | `/api/needs/:id` | Remove a need (admin only) |
+
+### Volunteers
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/volunteers` | List all volunteers (with filters) |
+| `PATCH` | `/api/volunteers/:id/availability` | Update availability status |
+| `GET` | `/api/volunteers/:id/tasks` | Get volunteer's task history |
+
+### Matching
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/match/:need_id` | Trigger smart matching for a specific need |
+| `GET` | `/api/match/suggestions/:need_id` | Get top 5 volunteer suggestions |
+| `POST` | `/api/assignments` | Confirm assignment |
+| `PATCH` | `/api/assignments/:id/status` | Update: accepted → in_progress → completed |
+
+### OCR
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/ocr/extract` | Upload image → return extracted text (client-side Tesseract fallback) |
+
+### Analytics
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/analytics/summary` | Total needs, volunteers, response time stats |
+| `GET` | `/api/analytics/heatmap` | Geo-clustered need density data |
+
+---
+
+## 7. The Smart Matching Algorithm
+
+This is the **heart** of the project. Here's the scoring logic:
+
+```python
+def calculate_match_score(volunteer, need):
+    """
+    Score = (W1 × Distance Score) + (W2 × Skill Score) + (W3 × Availability Score)
+    
+    Weights: Distance = 40%, Skill = 35%, Availability = 25%
+    Each sub-score is normalized to 0-100.
+    """
+    
+    # 1. Distance Score (closer = higher score)
+    distance_km = haversine(volunteer.location, need.location)
+    if distance_km > 50:
+        distance_score = 0
+    else:
+        distance_score = max(0, 100 - (distance_km * 2))  # Linear decay
+    
+    # 2. Skill Score (matching skills = higher score)
+    required_skills = CATEGORY_SKILL_MAP[need.category]
+    matched = len(set(volunteer.skills) & set(required_skills))
+    skill_score = (matched / len(required_skills)) * 100 if required_skills else 50
+    
+    # Bonus: Has vehicle for delivery tasks
+    if need.category in ["food", "supply"] and volunteer.has_vehicle:
+        skill_score = min(100, skill_score + 20)
+    
+    # 3. Availability Score
+    availability_score = {
+        "available": 100,
+        "busy_soon": 50,
+        "unavailable": 0
+    }.get(volunteer.availability, 0)
+    
+    # Final weighted score
+    total = (0.40 * distance_score) + (0.35 * skill_score) + (0.25 * availability_score)
+    
+    return round(total, 2)
+```
+
+### Category → Skill Mapping
+```python
+CATEGORY_SKILL_MAP = {
+    "medical":    ["medical", "first_aid", "nursing"],
+    "food":       ["cooking", "driving", "logistics"],
+    "shelter":    ["construction", "driving", "logistics"],
+    "education":  ["teaching", "counseling"],
+    "rescue":     ["swimming", "driving", "first_aid"],
+    "clothing":   ["logistics", "driving"],
+    "sanitation": ["cleaning", "logistics"],
+}
+```
+
+---
+
+## 8. Frontend Page Structure
+
+```
+src/
+├── pages/
+│   ├── LandingPage.jsx          # Hero + About + CTA
+│   ├── LoginPage.jsx            # Auth form (Login/Register toggle)
+│   ├── VolunteerDashboard.jsx   # My tasks, report need, profile
+│   ├── AdminDashboard.jsx       # Crisis map, analytics, manage
+│   ├── ReportNeedPage.jsx       # Form + OCR upload
+│   └── NeedDetailPage.jsx       # Single need + matching panel
+├── components/
+│   ├── Navbar.jsx
+│   ├── CrisisMap.jsx            # Leaflet map component
+│   ├── NeedCard.jsx             # Need summary card
+│   ├── VolunteerCard.jsx        # Volunteer profile card
+│   ├── MatchScoreBar.jsx        # Visual score indicator
+│   ├── OCRUploader.jsx          # Image upload + Tesseract
+│   ├── FilterPanel.jsx          # Category/urgency filters
+│   ├── StatsCards.jsx           # Analytics summary cards
+│   └── Toast.jsx                # Notification toasts
+├── services/
+│   ├── api.js                   # Axios instance + interceptors
+│   ├── auth.js                  # Login/register/token management
+│   ├── needs.js                 # Need CRUD API calls
+│   ├── volunteers.js            # Volunteer API calls
+│   └── matching.js              # Matching API calls
+├── context/
+│   └── AuthContext.jsx          # Global auth state
+├── utils/
+│   ├── ocr.js                   # Tesseract.js wrapper
+│   └── geo.js                   # Geolocation helpers
+├── App.jsx
+├── main.jsx
+└── index.css                    # Design system + global styles
+```
+
+---
+
+## 9. UI/UX Design Direction
+
+### Color Palette
+| Role | Color | Hex |
+|------|-------|-----|
+| Primary (Trust Blue) | 🟦 | `#2563EB` |
+| Accent (Action Orange) | 🟧 | `#F97316` |
+| Success (Resolved Green) | 🟩 | `#10B981` |
+| Danger (Critical Red) | 🟥 | `#EF4444` |
+| Warning (Urgent Amber) | 🟨 | `#F59E0B` |
+| Background (Dark) | ⬛ | `#0F172A` |
+| Surface (Card) | ⬛ | `#1E293B` |
+| Text Primary | ⬜ | `#F1F5F9` |
+
+### Map Marker Color Coding
+| Category | Marker Color | Icon |
+|----------|-------------|------|
+| Medical | 🔴 Red | ❤️‍🩹 |
+| Food | 🟠 Orange | 🍚 |
+| Shelter | 🔵 Blue | 🏠 |
+| Rescue | 🟣 Purple | 🚨 |
+| Education | 🟢 Green | 📚 |
+| Clothing | 🟡 Yellow | 👕 |
+
+### Design Principles
+- **Dark mode by default** — professional, modern feel
+- **Glassmorphism** cards — frosted glass effect on dashboard panels
+- **Smooth animations** — Framer Motion for page transitions
+- **Gradient accents** — subtle gradients on CTAs and headers
+- **Micro-interactions** — hover effects on cards, pulse on urgent markers
+- **Mobile-first** — responsive grid, touch-friendly map
+
+---
+
+## 10. How We'll Implement This (Step-by-Step)
+
+### 📁 Phase 1: Project Scaffolding (30 min)
+1. Initialize React + Vite frontend in `/frontend`
+2. Initialize FastAPI backend in `/backend`
+3. Set up MongoDB connection (MongoDB Atlas free tier or local)
+4. Create folder structure, install dependencies
+5. Set up environment variables (`.env`)
+
+### 🎨 Phase 2: Design System & Landing Page (1 hr)
+1. Build `index.css` with CSS custom properties (colors, typography, spacing)
+2. Import Google Font (Inter / Outfit)
+3. Create the Landing Page with hero section, problem statement, and CTA
+4. Build Navbar component with auth state
+
+### 🔐 Phase 3: Authentication (1.5 hr)
+1. Backend: User model, register/login endpoints, JWT middleware
+2. Frontend: Login/Register page, AuthContext, protected routes
+3. Two roles: `volunteer` and `admin`
+
+### 📝 Phase 4: Need Reporting System (2 hr)
+1. Backend: Need CRUD endpoints with geolocation
+2. Frontend: Report Need form (category dropdown, urgency slider, location picker)
+3. Integrate Leaflet mini-map for location selection
+4. Wire up API calls
+
+### 📷 Phase 5: OCR Integration (1.5 hr)
+1. Build OCR Uploader component with Tesseract.js
+2. Image upload → processing animation → extracted text display
+3. Auto-fill form fields from extracted text
+4. Demo with sample paper survey images
+
+### 🗺️ Phase 6: Crisis Map Dashboard (2 hr)
+1. Full-screen Leaflet map with OpenStreetMap tiles
+2. Load all needs as markers (color-coded by category)
+3. Marker popups with need details + "Assign Volunteer" button
+4. Filter panel (category, urgency, status)
+5. Cluster markers for dense areas (Leaflet.markercluster)
+
+### 🧠 Phase 7: Smart Matching Engine (2 hr)
+1. Backend: Implement the scoring algorithm
+2. MongoDB geospatial queries ($near) for distance calculation
+3. API: `/match/suggestions/:need_id` → returns top 5 ranked volunteers
+4. Frontend: Match panel showing volunteer cards with score bars
+5. Admin can approve/override matches
+
+### 📊 Phase 8: Analytics & Polish (1.5 hr)
+1. Summary stats cards (total needs, active volunteers, avg response time)
+2. Category distribution bar chart
+3. Urgency pie chart
+4. Animate numbers with count-up effect
+
+### 🧪 Phase 9: Testing & Demo Prep (1 hr)
+1. Seed database with realistic demo data (20 needs, 15 volunteers)
+2. Run through the full demo flow end-to-end
+3. Fix edge cases and UI polish
+4. Prepare demo script
+
+---
+
+## 11. 48-Hour Timeline
+
+```mermaid
+gantt
+    title Hackathon 48-Hour Plan
+    dateFormat HH:mm
+    axisFormat %H:%M
+
+    section Phase 1
+    Project Setup & Scaffolding       :a1, 00:00, 30m
+
+    section Phase 2
+    Design System & Landing Page      :a2, after a1, 60m
+
+    section Phase 3
+    Auth (Backend + Frontend)         :a3, after a2, 90m
+
+    section Phase 4
+    Need Reporting (CRUD + Form)      :a4, after a3, 120m
+
+    section Phase 5
+    OCR Integration (Tesseract.js)    :a5, after a4, 90m
+
+    section BREAK
+    Sleep / Rest                      :crit, b1, after a5, 360m
+
+    section Phase 6
+    Crisis Map Dashboard              :a6, after b1, 120m
+
+    section Phase 7
+    Smart Matching Algorithm          :a7, after a6, 120m
+
+    section Phase 8
+    Analytics & UI Polish             :a8, after a7, 90m
+
+    section Phase 9
+    Testing & Demo Prep               :a9, after a8, 60m
+```
+
+| Block | Time | Task | Deliverable |
+|-------|------|------|-------------|
+| **Hour 0–0.5** | 30 min | Scaffolding | Project running locally |
+| **Hour 0.5–1.5** | 1 hr | Design System + Landing | Beautiful landing page |
+| **Hour 1.5–3** | 1.5 hr | Auth System | Login/Register working |
+| **Hour 3–5** | 2 hr | Need Reporting | Form + API + DB working |
+| **Hour 5–6.5** | 1.5 hr | OCR Feature | Photo → text → form fill |
+| **Hour 6.5–12.5** | 6 hr | 😴 **SLEEP** | Recharged brain |
+| **Hour 12.5–14.5** | 2 hr | Crisis Map | Interactive map with markers |
+| **Hour 14.5–16.5** | 2 hr | Matching Engine | Smart volunteer assignment |
+| **Hour 16.5–18** | 1.5 hr | Analytics + Polish | Charts, animations, UX |
+| **Hour 18–19** | 1 hr | Testing + Demo | Demo-ready product |
+
+---
+
+## 12. Demo Script (For Judges)
+
+> **"Let me walk you through a real scenario..."**
+
+1. **The Problem** — Show a messy paper survey image
+2. **OCR Magic** — Upload it → watch text extraction → form auto-fills
+3. **Need Created** — Show it appearing as a red dot on the crisis map
+4. **Admin View** — Zoom into the dashboard, show filters, urgency levels
+5. **Smart Match** — Click "Find Volunteer" → algorithm scores and ranks
+6. **Assignment** — Best volunteer gets notified → task status updates
+7. **Analytics** — Show the dashboard with real-time stats
+8. **Impact** — *"What used to take days now takes seconds."*
+
+---
+
+## 13. Presentation Talking Points
+
+### Problem (30 sec)
+- 60%+ of NGO field data is still on paper
+- Volunteer misallocation wastes 40% of response capacity
+- Manual coordination creates deadly delays in emergencies
+
+### Solution (1 min)
+- **Digitize**: OCR converts paper chaos into structured data
+- **Visualize**: Real-time crisis map shows the full picture
+- **Optimize**: Smart matching deploys the right person instantly
+
+### Tech Differentiator (30 sec)
+- Weighted multi-factor matching (not just distance)
+- Browser-based OCR (works offline, no server cost)
+- Geospatial queries for real-time proximity search
+
+### Impact Metrics (30 sec)
+- **90% reduction** in data processing time (OCR vs manual entry)
+- **3x faster** volunteer deployment (algorithm vs phone calls)
+- **100% visibility** into community needs (map vs spreadsheets)
+
+---
+
+## 14. File Structure (Final)
+
+```
+promptwars/
+├── frontend/
+│   ├── public/
+│   │   └── favicon.ico
+│   ├── src/
+│   │   ├── pages/          # 6 pages
+│   │   ├── components/     # 10+ reusable components
+│   │   ├── services/       # API layer
+│   │   ├── context/        # Auth context
+│   │   ├── utils/          # OCR + geo helpers
+│   │   ├── assets/         # Images, icons
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   └── index.css
+│   ├── package.json
+│   └── vite.config.js
+├── backend/
+│   ├── app/
+│   │   ├── main.py         # FastAPI app entry
+│   │   ├── config.py       # Environment config
+│   │   ├── database.py     # MongoDB connection
+│   │   ├── models/
+│   │   │   ├── user.py
+│   │   │   ├── need.py
+│   │   │   └── assignment.py
+│   │   ├── routes/
+│   │   │   ├── auth.py
+│   │   │   ├── needs.py
+│   │   │   ├── volunteers.py
+│   │   │   ├── matching.py
+│   │   │   └── analytics.py
+│   │   ├── services/
+│   │   │   ├── matching_engine.py  # THE ALGORITHM
+│   │   │   └── ocr_service.py
+│   │   └── middleware/
+│   │       └── auth.py     # JWT verification
+│   ├── requirements.txt
+│   ├── .env
+│   └── seed_data.py        # Demo data seeder
+├── README.md
+└── .gitignore
+```
+
+---
+
+> [!IMPORTANT]
+> **Ready to build?** Confirm this plan and I'll start scaffolding the entire project — backend, frontend, database, and the matching algorithm. We'll go phase by phase, and you'll have a working demo before the hackathon ends.

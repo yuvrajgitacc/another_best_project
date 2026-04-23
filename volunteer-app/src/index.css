@@ -1,0 +1,295 @@
+/* ============================================
+   VOLUNTEER APP — Mobile-First Design System
+   ============================================ */
+
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #1a2235;
+  --bg-input: #1e293b;
+  --border: #2a3550;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-blue: #3b82f6;
+  --accent-green: #10b981;
+  --accent-red: #ef4444;
+  --accent-orange: #f97316;
+  --accent-amber: #f59e0b;
+  --accent-purple: #a855f7;
+  --gradient-primary: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  --font-family: 'Inter', -apple-system, sans-serif;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --bottom-nav-height: 64px;
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+body {
+  font-family: var(--font-family);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* App wrapper */
+.vol-app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+  padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 8px);
+}
+
+/* Page content */
+.vol-page {
+  padding: 16px;
+}
+
+.vol-page-header {
+  padding: 20px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.vol-page-header h1 {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.vol-page-header .subtitle {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: var(--bottom-nav-height);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 100;
+  padding-bottom: var(--safe-area-bottom);
+}
+
+.bottom-nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 12px;
+  transition: all 150ms ease;
+}
+
+.bottom-nav a .nav-icon { font-size: 22px; }
+.bottom-nav a.active { color: var(--accent-blue); }
+
+/* Cards */
+.vol-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+/* Task Card */
+.task-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  gap: 12px;
+  transition: all 200ms ease;
+}
+
+.task-card:active { transform: scale(0.98); }
+
+.task-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.task-info h3 { font-size: 14px; font-weight: 600; }
+.task-info .task-meta { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+/* Badges */
+.vol-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.vol-badge.assigned { background: rgba(249,115,22,0.15); color: var(--accent-orange); }
+.vol-badge.accepted { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+.vol-badge.in_progress { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
+.vol-badge.completed { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+
+/* Buttons */
+.vol-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  width: 100%;
+}
+
+.vol-btn.primary { background: var(--gradient-primary); color: white; }
+.vol-btn.success { background: var(--accent-green); color: white; }
+.vol-btn.danger { background: var(--accent-red); color: white; }
+.vol-btn.outline { background: transparent; border: 1px solid var(--border); color: var(--text-primary); }
+.vol-btn:active { transform: scale(0.97); }
+.vol-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Form */
+.vol-form-group { margin-bottom: 16px; }
+.vol-form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+.vol-form-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 14px;
+}
+.vol-form-input:focus { border-color: var(--accent-blue); outline: none; }
+
+/* Login */
+.vol-login {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.vol-login h1 {
+  font-size: 32px;
+  font-weight: 800;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+
+/* Stats */
+.vol-stat-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vol-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  text-align: center;
+}
+
+.vol-stat .num { font-size: 28px; font-weight: 800; }
+.vol-stat .label { font-size: 12px; color: var(--text-secondary); }
+
+/* Map */
+.vol-map {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  height: 250px;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+/* Actions */
+.action-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.action-btns .vol-btn { flex: 1; }
+
+/* Toggle */
+.availability-toggle {
+  display: flex;
+  background: var(--bg-input);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.availability-toggle button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.availability-toggle button.active { background: var(--accent-blue); color: white; }
+
+/* Loading */
+.vol-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-secondary);
+}
+
+.vol-spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
