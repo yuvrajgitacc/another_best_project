@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useState, useEffect } from 'react';
 
 const navItems = [
   { path: '/', icon: '📊', label: 'Dashboard' },
@@ -13,6 +14,12 @@ const navItems = [
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const [theme, setTheme] = useState(() => localStorage.getItem('sa-theme') || 'light');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('sa-theme', theme);
+  }, [theme]);
 
   return (
     <div className="app-layout">
@@ -37,17 +44,39 @@ export default function Layout() {
         </nav>
 
         <div className="sidebar-footer">
+          {/* Theme Toggle */}
+          <div className="theme-toggle">
+            <button
+              className={theme === 'light' ? 'active' : ''}
+              onClick={() => setTheme('light')}
+            >
+              ☀️ Light
+            </button>
+            <button
+              className={theme === 'dark' ? 'active' : ''}
+              onClick={() => setTheme('dark')}
+            >
+              🌙 Dark
+            </button>
+          </div>
+
+          {/* User Info */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
             {user?.picture ? (
               <img src={user.picture} alt="" style={{ width: 36, height: 36, borderRadius: '50%' }} />
             ) : (
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--gradient-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%',
+                background: 'var(--gradient-primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '14px', fontWeight: 700, color: '#fff'
+              }}>
                 {user?.name?.[0] || 'A'}
               </div>
             )}
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 600 }}>{user?.name || 'Admin'}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{user?.role}</div>
+              <div style={{ fontSize: '13px', fontWeight: 600 }}>{user?.name || 'Dev Admin'}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{user?.role || 'admin'}</div>
             </div>
           </div>
           <button className="btn btn-outline btn-sm" onClick={logout} style={{ width: '100%' }}>

@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../App';
 import { volunteer } from '../services/api';
 
+function useTheme() {
+  const [theme, setTheme] = useState(() => localStorage.getItem('sa-theme') || 'light');
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('sa-theme', theme);
+  }, [theme]);
+  return [theme, setTheme];
+}
+
 const ALL_SKILLS = [
   'medical', 'first_aid', 'nursing', 'cooking', 'driving',
   'logistics', 'construction', 'teaching', 'counseling',
@@ -10,6 +19,7 @@ const ALL_SKILLS = [
 ];
 
 export default function ProfilePage() {
+  const [theme, setTheme] = useTheme();
   const { user, logout } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -94,6 +104,12 @@ export default function ProfilePage() {
       </div>
 
       <div className="vol-page">
+        {/* Theme Toggle */}
+        <div className="vol-theme-toggle">
+          <button className={theme === 'light' ? 'active' : ''} onClick={() => setTheme('light')}>☀️ Light</button>
+          <button className={theme === 'dark' ? 'active' : ''} onClick={() => setTheme('dark')}>🌙 Dark</button>
+        </div>
+
         {/* Availability Toggle */}
         {profile && (
           <div className="vol-card">
@@ -125,7 +141,7 @@ export default function ProfilePage() {
                 style={{
                   padding: '4px 12px', borderRadius: '16px', border: 'none', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
                   background: form.skills.includes(skill) ? 'rgba(59,130,246,0.3)' : 'var(--bg-input)',
-                  color: form.skills.includes(skill) ? 'var(--accent-blue)' : 'var(--text-muted)',
+                  color: form.skills.includes(skill) ? 'var(--accent)' : 'var(--text-muted)',
                 }}>
                 {skill.replace('_', ' ')}
               </button>

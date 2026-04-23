@@ -1,0 +1,114 @@
+.pricing-page-wrapper {
+  padding-top: 120px;
+  background: #ffffff;
+  min-height: 100vh;
+}
+
+.pp-header {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.pp-header h1 {
+  font-size: 48px;
+  font-weight: 700;
+  color: #1a1c1e;
+  margin-bottom: 24px;
+  letter-spacing: -0.02em;
+}
+
+.pp-header p {
+  font-size: 18px;
+  color: #6b6375;
+  line-height: 1.6;
+}
+
+/* Comparison Table */
+.comparison-section {
+  max-width: 1000px;
+  margin: 120px auto;
+  padding: 0 24px;
+}
+
+.comparison-title {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 48px;
+}
+
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.comp-table th, .comp-table td {
+  padding: 20px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.comp-table th {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1c1e;
+}
+
+.comp-table td {
+  font-size: 15px;
+  color: #475569;
+}
+
+.comp-table th:not(:first-child), .comp-table td:not(:first-child) {
+  text-align: center;
+}
+
+.check-yes {
+  color: #059669;
+}
+
+.check-no {
+  color: #cbd5e1;
+}
+
+/* FAQ Section */
+.faq-section {
+  max-width: 800px;
+  margin: 0 auto 120px;
+  padding: 0 24px;
+}
+
+.faq-title {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 48px;
+}
+
+.faq-item {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 24px 0;
+}
+
+.faq-question {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1c1e;
+  cursor: pointer;
+}
+
+.faq-answer {
+  color: #6b6375;
+  line-height: 1.6;
+  margin-top: 16px;
+  font-size: 15px;
+}
+
+@media (max-width: 768px) {
+  .comp-table { display: block; overflow-x: auto; }
+}
