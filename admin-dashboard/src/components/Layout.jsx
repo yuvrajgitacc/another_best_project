@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, ClipboardList, Map, Users, BrainCircuit, ScanLine, Radio, Rocket, Sun, Moon, LogOut } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Map, Users, BrainCircuit, ScanLine, Radio, Rocket, Sun, Moon } from 'lucide-react';
 import DisasterAlertSystem from './DisasterAlertSystem';
 
 const navItems = [
@@ -15,7 +15,7 @@ const navItems = [
 ];
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [theme, setTheme] = useState(() => localStorage.getItem('sa-theme') || 'light');
 
   useEffect(() => {
@@ -66,27 +66,20 @@ export default function Layout() {
           </div>
 
           {/* User Info */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', marginTop: '16px' }}>
-            {user?.picture ? (
-              <img src={user.picture} alt="" style={{ width: 36, height: 36, borderRadius: '50%' }} />
-            ) : (
-              <div style={{
-                width: 36, height: 36, borderRadius: '50%',
-                background: 'var(--gradient-primary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '14px', fontWeight: 700, color: '#fff'
-              }}>
-                {user?.name?.[0] || 'A'}
-              </div>
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px' }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'var(--gradient-primary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '14px', fontWeight: 700, color: '#fff'
+            }}>
+              {user?.name?.[0] || 'A'}
+            </div>
             <div style={{ flex: 1, overflow: 'hidden' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.name || 'Dev Admin'}</div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.name || 'Admin'}</div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{user?.role || 'admin'}</div>
             </div>
           </div>
-          <button className="btn btn-outline" onClick={logout} style={{ width: '100%', justifyContent: 'center' }}>
-            <LogOut size={16} /> Logout
-          </button>
         </div>
       </aside>
 
