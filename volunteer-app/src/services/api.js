@@ -24,6 +24,8 @@ async function apiFetch(endpoint, options = {}) {
 
 export const auth = {
   googleLogin: (idToken) => apiFetch('/auth/google', { method: 'POST', body: JSON.stringify({ id_token: idToken, role: 'volunteer' }) }),
+  emailRegister: (email, password, name) => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, name, role: 'volunteer' }) }),
+  emailLogin: (email, password) => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   getMe: () => apiFetch('/auth/me'),
   logout: () => apiFetch('/auth/logout', { method: 'POST' }),
 };

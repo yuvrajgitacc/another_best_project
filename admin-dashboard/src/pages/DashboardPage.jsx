@@ -67,7 +67,7 @@ export default function DashboardPage() {
       doc.rect(0, 0, 210, 40, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(22);
-      doc.text('SmartAlloc Impact Report', 14, 20);
+      doc.text('SevaSetu Impact Report', 14, 20);
       doc.setFontSize(10);
       doc.text(`Generated: ${now}`, 14, 30);
       doc.text('Smart Resource Allocation Platform', 14, 36);
@@ -148,10 +148,10 @@ export default function DashboardPage() {
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(150);
-        doc.text(`SmartAlloc | Page ${i} of ${pageCount} | ${now}`, 14, 290);
+        doc.text(`SevaSetu | Page ${i} of ${pageCount} | ${now}`, 14, 290);
       }
 
-      doc.save(`SmartAlloc_Impact_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+      doc.save(`SevaSetu_Impact_Report_${new Date().toISOString().slice(0,10)}.pdf`);
       console.log('PDF saved!');
     } catch (err) {
       console.error('PDF export failed:', err);

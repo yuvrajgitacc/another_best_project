@@ -15,13 +15,39 @@ export function useAuth() { return useContext(AuthCtx); }
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(getStoredUser());
+  const [loading, setLoading] = useState(false);
 
   const login = async (token, role) => {
-    const res = await authApi.googleLogin(token, role);
-    setToken(res.access_token);
-    setStoredUser(res.user);
-    setUser(res.user);
-    return res;
+    setLoading(true);
+    try {
+      const res = await authApi.googleLogin(token, role);
+      setToken(res.access_token);
+      setStoredUser(res.user);
+      setUser(res.user);
+      return res;
+    } finally { setLoading(false); }
+  };
+
+  const emailLogin = async (email, password) => {
+    setLoading(true);
+    try {
+      const res = await authApi.emailLogin(email, password);
+      setToken(res.access_token);
+      setStoredUser(res.user);
+      setUser(res.user);
+      return res;
+    } finally { setLoading(false); }
+  };
+
+  const emailRegister = async (email, password, name) => {
+    setLoading(true);
+    try {
+      const res = await authApi.emailRegister(email, password, name);
+      setToken(res.access_token);
+      setStoredUser(res.user);
+      setUser(res.user);
+      return res;
+    } finally { setLoading(false); }
   };
 
   const devLogin = () => {
@@ -33,7 +59,7 @@ function AuthProvider({ children }) {
 
   const logout = () => { clearAuth(); setUser(null); };
 
-  return <AuthCtx.Provider value={{ user, login, devLogin, logout }}>{children}</AuthCtx.Provider>;
+  return <AuthCtx.Provider value={{ user, loading, login, emailLogin, emailRegister, devLogin, logout }}>{children}</AuthCtx.Provider>;
 }
 
 function BottomNav() {
@@ -69,12 +95,18 @@ function ProtectedLayout() {
   );
 }
 
+function LoginRedirect() {
+  const { user } = useAuth();
+  if (user) return <Navigate to="/" replace />;
+  return <LoginPage />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={<LoginRedirect />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/tasks" element={<TasksPage />} />

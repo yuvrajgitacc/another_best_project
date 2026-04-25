@@ -37,7 +37,8 @@ class User(Base):
     name = Column(String(255), nullable=False)
     picture = Column(String(512))
     role = Column(String(20), nullable=False, default="volunteer")  # 'admin' | 'volunteer'
-    google_id = Column(String(255), unique=True, index=True)
+    google_id = Column(String(255), unique=True, index=True, nullable=True)
+    password_hash = Column(String(255), nullable=True)  # For email/password auth
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)

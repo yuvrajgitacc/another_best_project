@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     """Central settings object, populated from .env file."""
 
     # --- App ---
-    APP_NAME: str = "SmartResourceAllocation"
+    APP_NAME: str = "SevaSetu"
     APP_ENV: str = "development"
     SECRET_KEY: str = "change-me-in-production-please"
     DEBUG: bool = True
@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     # --- File Uploads ---
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE_MB: int = 10
+
+    # --- OpenWeatherMap ---
+    OWM_API_KEY: str = ""
 
     # --- JWT ---
     JWT_ALGORITHM: str = "HS256"

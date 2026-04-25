@@ -28,7 +28,7 @@ export default function Layout() {
       <aside className="sidebar">
         <div className="sidebar-logo">
           <Rocket className="logo-icon text-accent" size={24} />
-          <h1>SmartAlloc</h1>
+          <h1>SevaSetu</h1>
         </div>
 
         <nav className="sidebar-nav">

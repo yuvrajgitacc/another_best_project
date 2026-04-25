@@ -78,6 +78,18 @@ export const auth = {
       body: JSON.stringify({ id_token: idToken, role }),
     }),
 
+  emailRegister: (email, password, name, role = 'admin') =>
+    apiFetch('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name, role }),
+    }),
+
+  emailLogin: (email, password) =>
+    apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+
   getMe: () => apiFetch('/auth/me'),
 
   logout: () => apiFetch('/auth/logout', { method: 'POST' }),

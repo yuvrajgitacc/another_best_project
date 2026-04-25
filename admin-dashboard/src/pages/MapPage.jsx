@@ -209,7 +209,7 @@ export default function MapPage() {
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(value)}&format=json&limit=5&countrycodes=in`,
-          { headers: { 'User-Agent': 'SmartAlloc/1.0' } }
+          { headers: { 'User-Agent': 'SevaSetu/1.0' } }
         );
         setSearchResults(await res.json());
       } catch (e) { console.error('Search failed:', e); }

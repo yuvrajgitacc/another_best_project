@@ -86,6 +86,20 @@ class GoogleAuthRequest(BaseModel):
     fcm_token: Optional[str] = Field(default=None, description="Firebase Cloud Messaging token")
 
 
+class EmailRegisterRequest(BaseModel):
+    """Register with email and password."""
+    email: str = Field(..., min_length=5, max_length=255)
+    password: str = Field(..., min_length=6, max_length=128)
+    name: str = Field(..., min_length=1, max_length=255)
+    role: UserRole = Field(default=UserRole.volunteer)
+
+
+class EmailLoginRequest(BaseModel):
+    """Login with email and password."""
+    email: str = Field(..., min_length=5, max_length=255)
+    password: str = Field(..., min_length=1, max_length=128)
+
+
 class TokenData(BaseModel):
     user_id: str
     email: str

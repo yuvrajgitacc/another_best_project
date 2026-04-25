@@ -1,38 +1,146 @@
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Rocket } from 'lucide-react';
+import { Shield, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 export default function LoginPage() {
-  const { login, devLogin, loading } = useAuth();
+  const { login, emailLogin, emailRegister, devLogin, loading } = useAuth();
+  const googleBtnRef = useRef(null);
+  const [mode, setMode] = useState('login'); // 'login' | 'register'
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleGoogleLogin = async () => {
-    // In production, use Google Sign-In SDK
-    // For now, this provides a dev bypass
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID || !window.google?.accounts?.id) return;
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleCallback,
+      auto_select: false,
+    });
+    window.google.accounts.id.renderButton(googleBtnRef.current, {
+      theme: 'filled_black',
+      size: 'large',
+      width: 320,
+      text: 'signin_with',
+      shape: 'pill',
+    });
+  }, []);
+
+  const handleGoogleCallback = async (response) => {
     try {
-      await devLogin();
+      setError('');
+      await login(response.credential, 'admin');
     } catch (err) {
-      alert('Login failed: ' + err.message);
+      setError(err.message);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      if (mode === 'register') {
+        if (!name.trim()) return setError('Name is required');
+        await emailRegister(email, password, name, 'admin');
+      } else {
+        await emailLogin(email, password);
+      }
+    } catch (err) {
+      setError(err.message);
     }
   };
 
   return (
     <div className="login-page">
-      <div className="login-card">
-        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center', color: 'var(--accent)' }}><Rocket size={48} /></div>
-        <h1>SmartAlloc</h1>
-        <p>Admin Dashboard — Volunteer Coordination Platform</p>
+      <div className="login-card" style={{ maxWidth: '400px' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '50%',
+            background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 32px rgba(37,99,235,0.3)'
+          }}>
+            <Shield size={32} color="#fff" />
+          </div>
+        </div>
+        <h1 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '4px' }}>SevaSetu</h1>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
+          Admin Dashboard — Disaster Response Platform
+        </p>
 
-        <button className="google-btn" onClick={handleGoogleLogin} disabled={loading}>
-          <svg viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-          </svg>
-          {loading ? 'Signing in...' : 'Sign in with Google'}
-        </button>
+        {/* Google Sign-In */}
+        {GOOGLE_CLIENT_ID && (
+          <>
+            <div ref={googleBtnRef} style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '0 0 16px', color: 'var(--text-muted)', fontSize: '12px' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+              or
+              <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+            </div>
+          </>
+        )}
 
-        <div style={{ marginTop: '24px', fontSize: '12px', color: 'var(--text-muted)' }}>
-          Admin access only. Contact your NGO head for access.
+        {/* Toggle Login / Register */}
+        <div style={{ display: 'flex', background: 'var(--bg-input)', borderRadius: '10px', padding: '3px', marginBottom: '16px', border: '1px solid var(--border-color)' }}>
+          <button onClick={() => { setMode('login'); setError(''); }} style={{
+            flex: 1, padding: '8px', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+            background: mode === 'login' ? 'var(--accent)' : 'transparent',
+            color: mode === 'login' ? '#fff' : 'var(--text-muted)',
+            transition: 'all 0.2s'
+          }}>Login</button>
+          <button onClick={() => { setMode('register'); setError(''); }} style={{
+            flex: 1, padding: '8px', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+            background: mode === 'register' ? 'var(--accent)' : 'transparent',
+            color: mode === 'register' ? '#fff' : 'var(--text-muted)',
+            transition: 'all 0.2s'
+          }}>Sign Up</button>
+        </div>
+
+        {/* Email/Password Form */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {mode === 'register' && (
+            <div style={{ position: 'relative' }}>
+              <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)}
+                style={{ width: '100%', padding: '12px 12px 12px 38px', background: 'var(--bg-input)', border: '1.5px solid var(--border-color)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit' }} />
+            </div>
+          )}
+          <div style={{ position: 'relative' }}>
+            <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} required
+              style={{ width: '100%', padding: '12px 12px 12px 38px', background: 'var(--bg-input)', border: '1.5px solid var(--border-color)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit' }} />
+          </div>
+          <div style={{ position: 'relative' }}>
+            <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input type={showPw ? 'text' : 'password'} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required
+              style={{ width: '100%', padding: '12px 40px 12px 38px', background: 'var(--bg-input)', border: '1.5px solid var(--border-color)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit' }} />
+            <button type="button" onClick={() => setShowPw(!showPw)}
+              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}>
+              {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+
+          {error && (
+            <div style={{ padding: '8px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', color: '#ef4444', fontSize: '12px' }}>
+              {error}
+            </div>
+          )}
+
+          <button type="submit" disabled={loading} style={{
+            padding: '12px', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700,
+            background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff', cursor: 'pointer',
+            opacity: loading ? 0.6 : 1, transition: 'all 0.2s'
+          }}>
+            {loading ? 'Please wait...' : mode === 'register' ? 'Create Account' : 'Sign In'}
+          </button>
+        </form>
+
+        <div style={{ marginTop: '16px', fontSize: '11px', color: 'var(--text-muted)' }}>
+          Admin access only. Secured with JWT + bcrypt encryption.
         </div>
       </div>
     </div>

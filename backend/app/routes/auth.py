@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-Auth routes — Google OAuth login, token refresh, profile.
+Auth routes — Google OAuth login, email/password login, token refresh, profile.
 """
 
 import json
@@ -10,10 +10,14 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 
 from ..database import get_db
 from ..models import User, Volunteer, AuditLog
-from ..schemas import GoogleAuthRequest, AuthResponse, UserResponse, UserUpdateRequest, MessageResponse
+from ..schemas import (
+    GoogleAuthRequest, EmailRegisterRequest, EmailLoginRequest,
+    AuthResponse, UserResponse, UserUpdateRequest, MessageResponse,
+)
 from ..middleware.auth import (
     verify_google_token, create_access_token,
     get_current_user,
@@ -22,6 +26,9 @@ from ..config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -109,6 +116,112 @@ async def google_login(
     )
 
 
+@router.post("/register", response_model=AuthResponse)
+async def email_register(
+    body: EmailRegisterRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Register a new user with email and password."""
+    # Check if email already exists
+    existing = db.query(User).filter(User.email == body.email).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists. Try logging in.",
+        )
+
+    # Create user with hashed password
+    user = User(
+        email=body.email,
+        name=body.name,
+        role=body.role.value,
+        password_hash=pwd_context.hash(body.password),
+    )
+    db.add(user)
+    db.flush()
+
+    # Auto-create volunteer profile if role is volunteer
+    if body.role.value == "volunteer":
+        volunteer = Volunteer(user_id=user.id)
+        db.add(volunteer)
+
+    # Audit log
+    audit = AuditLog(
+        user_id=user.id,
+        action="auth.register",
+        entity_type="user",
+        entity_id=user.id,
+        details=json.dumps({"method": "email"}),
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent", "")[:500],
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(user)
+
+    access_token = create_access_token(
+        data={"sub": user.id, "email": user.email, "role": user.role}
+    )
+
+    return AuthResponse(
+        access_token=access_token,
+        user=UserResponse.model_validate(user),
+        is_new_user=True,
+    )
+
+
+@router.post("/login", response_model=AuthResponse)
+async def email_login(
+    body: EmailLoginRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Login with email and password."""
+    user = db.query(User).filter(User.email == body.email).first()
+
+    if not user or not user.password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    if not pwd_context.verify(body.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated",
+        )
+
+    # Audit log
+    audit = AuditLog(
+        user_id=user.id,
+        action="auth.login",
+        entity_type="user",
+        entity_id=user.id,
+        details=json.dumps({"method": "email"}),
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent", "")[:500],
+    )
+    db.add(audit)
+    db.commit()
+
+    access_token = create_access_token(
+        data={"sub": user.id, "email": user.email, "role": user.role}
+    )
+
+    return AuthResponse(
+        access_token=access_token,
+        user=UserResponse.model_validate(user),
+        is_new_user=False,
+    )
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     """Get the current authenticated user's profile."""
@@ -159,3 +272,4 @@ async def logout(
     db.commit()
 
     return MessageResponse(message="Logged out successfully")
+

@@ -20,6 +20,32 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const emailLogin = async (email, password) => {
+    setLoading(true);
+    try {
+      const res = await authApi.emailLogin(email, password);
+      setToken(res.access_token);
+      setStoredUser(res.user);
+      setUser(res.user);
+      return res;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const emailRegister = async (email, password, name, role = 'admin') => {
+    setLoading(true);
+    try {
+      const res = await authApi.emailRegister(email, password, name, role);
+      setToken(res.access_token);
+      setStoredUser(res.user);
+      setUser(res.user);
+      return res;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       await authApi.logout();
@@ -32,23 +58,20 @@ export function AuthProvider({ children }) {
 
   // Dev mode: auto-login for testing (skip Google OAuth)
   const devLogin = async () => {
-    // This creates a mock session for development
     const mockUser = {
       id: 'dev-admin-001',
-      email: 'admin@smartalloc.org',
+      email: 'admin@sevasetu.org',
       name: 'Dev Admin',
       role: 'admin',
       is_active: true,
     };
-    // For dev, we'll set a mock token that the backend will need to handle
-    // In production, always use Google OAuth
     setToken('dev-token');
     setStoredUser(mockUser);
     setUser(mockUser);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, devLogin }}>
+    <AuthContext.Provider value={{ user, loading, login, emailLogin, emailRegister, logout, devLogin }}>
       {children}
     </AuthContext.Provider>
   );
