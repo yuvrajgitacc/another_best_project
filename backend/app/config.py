@@ -61,7 +61,7 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> list[str]:
-        origins = [self.FRONTEND_ADMIN_URL, self.FRONTEND_VOLUNTEER_URL]
+        origins = [self.FRONTEND_ADMIN_URL, self.FRONTEND_VOLUNTEER_URL, "http://localhost:5175"]
         if self.DEBUG:
             origins.append("http://localhost:3000")
         return origins

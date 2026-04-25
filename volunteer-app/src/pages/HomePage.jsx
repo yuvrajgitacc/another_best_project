@@ -32,7 +32,7 @@ export default function HomePage() {
     <>
       {/* Dynamic Header */}
       <div style={{
-        padding: '32px 20px 24px',
+        padding: '20px 20px 24px',
         background: 'linear-gradient(135deg, var(--bg-card), var(--bg-primary))',
         borderBottom: '1px solid var(--border-color)',
         position: 'relative',

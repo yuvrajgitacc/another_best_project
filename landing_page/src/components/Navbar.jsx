@@ -2,12 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { motion, useScroll } from 'framer-motion';
 import './Navbar.css';
 
-export const Logo = () => (
-  <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="6" fill="none" />
-    <path d="M50 25 C35 35, 30 50, 50 65 C70 50, 65 35, 50 25Z" fill="currentColor" opacity="0.8"/>
-    <path d="M35 55 L50 70 L65 55" stroke="currentColor" strokeWidth="5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
+export const Logo = ({ height = '120px', scrolled = false }) => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Rounded white card when scrolled over white bg; clean pill over dark hero
+    background: scrolled ? 'transparent' : 'rgba(255,255,255,0.12)',
+    backdropFilter: scrolled ? 'none' : 'blur(8px)',
+    WebkitBackdropFilter: scrolled ? 'none' : 'blur(8px)',
+    borderRadius: '16px',
+    padding: scrolled ? '0' : '6px 10px',
+    border: scrolled ? 'none' : '1px solid rgba(255,255,255,0.25)',
+    transition: 'all 0.4s ease',
+    boxShadow: scrolled ? 'none' : '0 4px 20px rgba(0,0,0,0.2)',
+  }}>
+    <img
+      src="/LOGO.png"
+      alt="SevaSetu Logo"
+      style={{
+        height: height,
+        width: 'auto',
+        objectFit: 'contain',
+        imageRendering: '-webkit-optimize-contrast',
+        display: 'block',
+        // Remove white background via mix-blend-mode over dark backgrounds
+        mixBlendMode: scrolled ? 'normal' : 'multiply',
+        filter: scrolled ? 'none' : 'contrast(1.1) brightness(1.05)',
+      }}
+    />
+  </div>
 );
 
 const Navbar = ({ onNavigate }) => {
@@ -17,7 +41,7 @@ const Navbar = ({ onNavigate }) => {
 
   useEffect(() => {
     return scrollY.onChange((latest) => {
-      setScrolled(latest > 50);
+      setScrolled(latest > 80);
     });
   }, [scrollY]);
 
@@ -39,11 +63,21 @@ const Navbar = ({ onNavigate }) => {
       <motion.button
         className="nav-left"
         onClick={() => onNavigate('landing')}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: 0 }}
-        whileHover={{ opacity: 0.8 }}
+        style={{
+          background: 'none',
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          padding: 0,
+          outline: 'none',
+          WebkitAppearance: 'none',
+        }}
+        whileHover={{ opacity: 0.88, scale: 1.02 }}
+        transition={{ duration: 0.2 }}
       >
-        <Logo />
-        <span className="logo-text" style={{ fontSize: '18px', fontWeight: '700', color: '#1a1c1e', fontFamily: 'var(--serif)' }}>SevaSetu</span>
+        <Logo height={scrolled ? '80px' : '100px'} scrolled={scrolled} />
       </motion.button>
 
       <div className="nav-center">
@@ -67,10 +101,12 @@ const Navbar = ({ onNavigate }) => {
                 fontFamily: 'var(--sans)',
                 fontSize: '14px',
                 fontWeight: isActive ? '700' : '500',
-                color: isActive ? '#3b82f6' : '#1a1c1e',
+                color: isActive
+                  ? (scrolled ? '#3b82f6' : '#fbbf24')
+                  : (scrolled ? '#1a1c1e' : 'rgba(255,255,255,0.85)'),
                 padding: '8px 12px'
               }}
-              whileHover={{ y: isActive ? 0 : -1, color: '#3b82f6' }}
+              whileHover={{ y: isActive ? 0 : -1 }}
               transition={{ duration: 0.15, ease: "easeOut" }}
             >
               {item}
@@ -83,7 +119,7 @@ const Navbar = ({ onNavigate }) => {
                     left: '10%',
                     right: '10%',
                     height: '2px',
-                    background: '#3b82f6',
+                    background: scrolled ? '#3b82f6' : '#f59e0b',
                     borderRadius: '2px'
                   }}
                   transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
@@ -96,7 +132,7 @@ const Navbar = ({ onNavigate }) => {
 
       <div className="nav-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <motion.button
-          className="install-app-btn"
+          className={scrolled ? 'install-app-btn' : 'install-app-btn install-app-btn-light'}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleInstallApp}
@@ -109,7 +145,7 @@ const Navbar = ({ onNavigate }) => {
           Install App
         </motion.button>
         <motion.button
-          className="dashboard-btn"
+          className={scrolled ? 'dashboard-btn' : 'dashboard-btn dashboard-btn-light'}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleDashboard}

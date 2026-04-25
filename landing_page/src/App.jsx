@@ -48,8 +48,10 @@ function App() {
 
   return (
     <div style={{ padding: '0', backgroundColor: 'white', minHeight: '100vh' }}>
+      {/* Fixed navbar floats above everything */}
       <Navbar onNavigate={handleNavigate} />
       <main>
+        {/* Hero fills full viewport — navbar is fixed so no offset needed */}
         <HeroHeader />
         <LogoCloud />
         <HowItWorks />

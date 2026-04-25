@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../App';
-import { Heart, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -56,15 +56,17 @@ export default function LoginPage() {
 
   return (
     <div className="vol-login" style={{ padding: '24px' }}>
-      <div style={{
-        width: '72px', height: '72px', borderRadius: '50%',
-        background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        marginBottom: '20px', boxShadow: '0 8px 32px rgba(59,130,246,0.3)'
-      }}>
-        <Heart size={32} color="#fff" />
-      </div>
-      <h1>SevaSetu</h1>
+      <img
+        src="/LOGO.png"
+        alt="SevaSetu"
+        style={{
+          height: '350px',
+          width: 'auto',
+          objectFit: 'contain',
+          marginBottom: '20px',
+          imageRendering: '-webkit-optimize-contrast',
+        }}
+      />
       <p style={{ color: 'var(--text-secondary)', marginBottom: '28px', maxWidth: '280px', fontSize: '13px' }}>
         Join the volunteer network. Get matched to community needs in real-time.
       </p>

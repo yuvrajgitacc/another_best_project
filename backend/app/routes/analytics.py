@@ -353,3 +353,32 @@ async def get_impact_stats(
         "top_categories": [{"category": cat, "count": cnt} for cat, cnt in top_cats],
         "resolution_rate": round((needs_resolved / needs_created * 100), 1) if needs_created > 0 else 0,
     }
+
+
+@router.get("/public-stats")
+async def get_public_stats(db: Session = Depends(get_db)):
+    """Public stats for the landing page."""
+    active_volunteers = db.query(func.count(Volunteer.id)).filter(
+        Volunteer.availability.in_(["available", "busy"])
+    ).scalar() or 0
+
+    active_campaigns = db.query(func.count(Need.id)).filter(
+        Need.status.in_(["open", "assigned", "in_progress"])
+    ).scalar() or 0
+
+    # Task completion rate
+    total_assignments = db.query(func.count(Assignment.id)).scalar() or 0
+    completed_assignments = db.query(func.count(Assignment.id)).filter(
+        Assignment.status == "completed"
+    ).scalar() or 0
+    task_completion = round((completed_assignments / total_assignments * 100), 1) if total_assignments > 0 else 0.0
+
+    # Average user rating
+    avg_rating = db.query(func.avg(Volunteer.rating)).scalar() or 0.0
+    
+    return {
+        "active_volunteers": active_volunteers,
+        "active_campaigns": active_campaigns,
+        "task_completion": task_completion,
+        "user_rating": round(avg_rating, 1)
+    }

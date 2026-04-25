@@ -36,3 +36,7 @@ Thumbs.db
 
 # Firebase credentials (NEVER commit this)
 firebase-credentials.json
+
+# User exclusions
+requirements.txt
+*.md

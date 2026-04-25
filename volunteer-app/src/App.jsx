@@ -84,12 +84,42 @@ function BottomNav() {
   );
 }
 
+function TopBar() {
+  return (
+    <header style={{
+      padding: '16px 20px',
+      background: 'var(--bg-card)',
+      borderBottom: '1px solid var(--border-color)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'sticky',
+      top: 0,
+      zIndex: 100
+    }}>
+      <img
+        src="/LOGO.png"
+        alt="SevaSetu"
+        style={{
+          height: '120px',
+          width: 'auto',
+          objectFit: 'contain',
+          imageRendering: '-webkit-optimize-contrast',
+        }}
+      />
+    </header>
+  );
+}
+
 function ProtectedLayout() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   return (
     <div className="vol-app">
-      <Outlet />
+      <TopBar />
+      <div style={{ paddingBottom: '80px' }}>
+        <Outlet />
+      </div>
       <BottomNav />
     </div>
   );

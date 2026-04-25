@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, ClipboardList, Map, Users, BrainCircuit, ScanLine, Radio, Rocket, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Map, Users, BrainCircuit, ScanLine, Radio, Sun, Moon } from 'lucide-react';
 import DisasterAlertSystem from './DisasterAlertSystem';
 
 const navItems = [
@@ -26,9 +26,20 @@ export default function Layout() {
   return (
     <div className="app-layout">
       <aside className="sidebar">
-        <div className="sidebar-logo">
-          <Rocket className="logo-icon text-accent" size={24} />
-          <h1>SevaSetu</h1>
+        <div className="sidebar-logo" style={{ padding: '20px 10px' }}>
+          <img
+            src="/LOGO.png"
+            alt="SevaSetu"
+            style={{
+              width: '100%',
+              maxWidth: '260px',
+              height: 'auto',
+              objectFit: 'contain',
+              imageRendering: '-webkit-optimize-contrast',
+              display: 'block',
+              margin: '0 auto',
+            }}
+          />
         </div>
 
         <nav className="sidebar-nav">

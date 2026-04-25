@@ -3,21 +3,25 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 4rem;
-  background-color: transparent;
-  height: 80px;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
+  /* Must use rgba, NOT 'transparent' keyword, for CSS transition to work */
+  background-color: rgba(0, 0, 0, 0);
+  height: 120px;
   z-index: 1000;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  border-bottom: 1.5px solid transparent;
+  transition: background-color 0.45s ease, height 0.35s ease, box-shadow 0.35s ease;
 }
 
+/* Scrolled state: frosted white bar */
 .navbar.scrolled {
-  background-color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  height: 70px;
+  background-color: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 24px rgba(0,0,0,0.08);
+  height: 96px;
 }
 
 .nav-left {
@@ -25,6 +29,12 @@
   align-items: center;
   gap: 12px;
   cursor: pointer;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .logo-text {
@@ -79,8 +89,15 @@
   gap: 10px;
   cursor: pointer;
   font-family: var(--sans);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Over hero: amber/golden button */
+.install-app-btn-light {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 4px 20px rgba(245,158,11,0.35);
+  color: #1a1206;
 }
 
 .install-app-btn:hover {
@@ -106,7 +123,17 @@
   gap: 10px;
   cursor: pointer;
   font-family: var(--sans);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Over hero: glassmorphism button */
+.dashboard-btn-light {
+  background: rgba(255,255,255,0.10);
+  border: 1.5px solid rgba(255,255,255,0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
 }
 
 .dashboard-btn:hover {
