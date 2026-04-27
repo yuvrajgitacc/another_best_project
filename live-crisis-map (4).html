@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Crisis Map</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.4.1/maplibre-gl.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.4.1/maplibre-gl.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --border: #e2e5ec;
+    --text: #111827;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+    --c-medical: #ef4444;
+    --c-food: #f97316;
+    --c-shelter: #3b82f6;
+    --c-water: #06b6d4;
+    --c-rescue: #8b5cf6;
+    --c-education: #10b981;
+    --c-clothing: #f59e0b;
+    --c-sanitation: #84cc16;
+  }
+
+  body { font-family: 'Outfit', sans-serif; background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; color: var(--text); }
+
+  /* ── HEADER ── */
+  #header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  #header-left { display: flex; align-items: center; gap: 10px; flex: 1; }
+  .logo-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 7px; display: flex; align-items: center; justify-content: center; }
+  .logo-icon svg { width: 16px; height: 16px; }
+  #app-title { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; color: var(--text); }
+  #active-count {
+    font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px;
+    background: var(--bg); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+  }
+  .pulse-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #22c55e;
+    animation: pulse-ring 2s ease infinite;
+    box-shadow: 0 0 0 0 rgba(34,197,94,0.4);
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  }
+  #refresh-timer { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  #header-right { display: flex; align-items: center; gap: 8px; }
+  .ctrl-btn {
+    display: flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface); cursor: pointer;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; color: var(--text);
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .ctrl-btn:hover { background: var(--bg); border-color: #c4c9d4; }
+  .ctrl-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .ctrl-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .ctrl-btn.primary:hover { background: #1d4ed8; }
+  .ctrl-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  /* ── TOOLBAR ── */
+  #toolbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    overflow-x: auto;
+  }
+  #toolbar::-webkit-scrollbar { display: none; }
+
+  .filter-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap; }
+
+  .cat-btn {
+    display: flex; align-items: center; gap: 5px; padding: 5px 12px;
+    border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface);
+    cursor: pointer; font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 500;
+    color: var(--text); transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+  }
+  .cat-btn .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .cat-btn.active { border-width: 2px; }
+  .cat-btn[data-cat="all"].active { background: #111827; color: #fff; border-color: #111827; }
+  .cat-btn[data-cat="medical"].active { background: var(--c-medical); color: #fff; border-color: var(--c-medical); }
+  .cat-btn[data-cat="food"].active { background: var(--c-food); color: #fff; border-color: var(--c-food); }
+  .cat-btn[data-cat="shelter"].active { background: var(--c-shelter); color: #fff; border-color: var(--c-shelter); }
+  .cat-btn[data-cat="water"].active { background: var(--c-water); color: #fff; border-color: var(--c-water); }
+  .cat-btn[data-cat="rescue"].active { background: var(--c-rescue); color: #fff; border-color: var(--c-rescue); }
+  .cat-btn[data-cat="education"].active { background: var(--c-education); color: #fff; border-color: var(--c-education); }
+  .cat-btn[data-cat="clothing"].active { background: var(--c-clothing); color: #fff; border-color: var(--c-clothing); }
+  .cat-btn[data-cat="sanitation"].active { background: var(--c-sanitation); color: #fff; border-color: var(--c-sanitation); }
+
+  /* ── SEARCH ── */
+  #search-bar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 8px 20px; flex-shrink: 0; position: relative; display: flex; align-items: center;
+  }
+  #search-bar svg { position: absolute; left: 34px; color: var(--muted); width: 15px; height: 15px; pointer-events: none; }
+  #search-input {
+    width: 100%; padding: 8px 12px 8px 36px; border-radius: 8px; border: 1px solid var(--border);
+    font-family: 'Outfit', sans-serif; font-size: 13px; background: var(--bg); color: var(--text);
+    outline: none; transition: border-color 0.15s;
+  }
+  #search-input:focus { border-color: var(--accent); background: #fff; }
+  #search-results {
+    position: absolute; top: calc(100% - 8px); left: 20px; right: 20px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow);
+    z-index: 1000; display: none; max-height: 200px; overflow-y: auto;
+  }
+  .search-item { padding: 10px 14px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+  .search-item:last-child { border-bottom: none; }
+  .search-item:hover { background: var(--bg); }
+  .search-item-icon { width: 28px; height: 28px; border-radius: 6px; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* ── MAP ── */
+  #map-wrap { flex: 1; position: relative; overflow: hidden; }
+  #map { width: 100%; height: 100%; }
+
+  /* ── LEGEND ── */
+  #legend {
+    position: absolute; bottom: 28px; left: 16px; background: rgba(255,255,255,0.95);
+    border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px;
+    box-shadow: var(--shadow); backdrop-filter: blur(8px); display: flex; flex-wrap: wrap;
+    gap: 8px 14px; max-width: 560px; z-index: 5;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; color: var(--text); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .legend-sep { width: 1px; background: var(--border); align-self: stretch; }
+  .legend-note { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+  .legend-big { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #6b7280; background: transparent; flex-shrink: 0; }
+
+  /* ── STATS PANEL ── */
+  #stats-panel {
+    position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.95);
+    border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
+    box-shadow: var(--shadow); backdrop-filter: blur(8px); z-index: 5; min-width: 180px;
+  }
+  #stats-panel h4 { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+  .stat-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
+  .stat-label { display: flex; align-items: center; gap: 6px; color: var(--text); }
+  .stat-val { font-family: 'DM Mono', monospace; font-weight: 500; font-size: 12px; }
+
+  /* ── POPUP ── */
+  .maplibregl-popup-content {
+    border-radius: 10px !important; padding: 0 !important; box-shadow: var(--shadow) !important;
+    border: 1px solid var(--border) !important; overflow: hidden; min-width: 220px;
+  }
+  .maplibregl-popup-tip { display: none; }
+  .popup-header { padding: 12px 14px 8px; border-bottom: 1px solid var(--border); }
+  .popup-cat { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+  .popup-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .popup-body { padding: 10px 14px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .popup-footer { padding: 8px 14px; background: var(--bg); display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+  .urgency-badge { padding: 2px 7px; border-radius: 6px; font-weight: 600; font-size: 10px; }
+  .urgency-high { background: #fef2f2; color: #ef4444; }
+  .urgency-med { background: #fff7ed; color: #f97316; }
+  .urgency-low { background: #f0fdf4; color: #16a34a; }
+
+  /* MapLibre control styling */
+  .maplibregl-ctrl-group { border-radius: 8px !important; box-shadow: var(--shadow) !important; border: 1px solid var(--border) !important; }
+  .maplibregl-ctrl-group button { border-radius: 0 !important; }
+
+  /* Weather overlay */
+  #weather-banner {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(37,99,235,0.9); color: #fff; padding: 8px 16px; border-radius: 20px;
+    font-size: 12px; font-weight: 500; display: none; z-index: 5; backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinning { animation: spin 0.8s linear infinite; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div id="header-left">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+      </svg>
+    </div>
+    <span id="app-title">Live Crisis Map</span>
+    <div id="active-count">
+      <span class="pulse-dot"></span>
+      <span id="count-text">24 active needs</span>
+    </div>
+    <span id="refresh-timer">↻ 30s</span>
+  </div>
+  <div id="header-right">
+    <button class="ctrl-btn" id="btn-3d" onclick="toggle3D()" title="Toggle 3D view">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+      </svg>
+      <span class="btn-label">3D View</span>
+    </button>
+    <button class="ctrl-btn" id="btn-weather" onclick="toggleWeather()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z"/>
+      </svg>
+      Weather Overlay
+    </button>
+    <button class="ctrl-btn" id="btn-heatmap" onclick="toggleHeatmap()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+      </svg>
+      Show Heatmap
+    </button>
+    <button class="ctrl-btn primary" onclick="doRefresh()">
+      <svg id="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M21 2v6h-6"/><path d="M21 13a9 9 0 1 1-3-7.7L21 8"/>
+      </svg>
+      Refresh
+    </button>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <span class="filter-label">Filter</span>
+  <button class="cat-btn active" data-cat="all" onclick="setFilter('all')">All</button>
+  <button class="cat-btn" data-cat="medical" onclick="setFilter('medical')">
+    <span class="dot" style="background:var(--c-medical)"></span>Medical
+  </button>
+  <button class="cat-btn" data-cat="food" onclick="setFilter('food')">
+    <span class="dot" style="background:var(--c-food)"></span>Food
+  </button>
+  <button class="cat-btn" data-cat="shelter" onclick="setFilter('shelter')">
+    <span class="dot" style="background:var(--c-shelter)"></span>Shelter
+  </button>
+  <button class="cat-btn" data-cat="water" onclick="setFilter('water')">
+    <span class="dot" style="background:var(--c-water)"></span>Water
+  </button>
+  <button class="cat-btn" data-cat="rescue" onclick="setFilter('rescue')">
+    <span class="dot" style="background:var(--c-rescue)"></span>Rescue
+  </button>
+  <button class="cat-btn" data-cat="education" onclick="setFilter('education')">
+    <span class="dot" style="background:var(--c-education)"></span>Education
+  </button>
+  <button class="cat-btn" data-cat="clothing" onclick="setFilter('clothing')">
+    <span class="dot" style="background:var(--c-clothing)"></span>Clothing
+  </button>
+  <button class="cat-btn" data-cat="sanitation" onclick="setFilter('sanitation')">
+    <span class="dot" style="background:var(--c-sanitation)"></span>Sanitation
+  </button>
+</div>
+
+<!-- SEARCH -->
+<div id="search-bar">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+  </svg>
+  <input id="search-input" type="text" placeholder="Search location (e.g. Dharavi, Mumbai, Vadodara)" oninput="onSearch(this.value)" onblur="hideResults()">
+  <div id="search-results"></div>
+</div>
+
+<!-- MAP -->
+<div id="map-wrap">
+  <div id="map"></div>
+
+  <!-- Stats Panel -->
+  <div id="stats-panel">
+    <h4>Active Needs</h4>
+    <div class="stat-row"><span class="stat-label"><span class="legend-dot" style="background:var(--c-medical)"></span>Medical</span><span class="stat-val" id="s-medical">5</span></div>
+    <div class="stat-row"><span class="stat-label"><span class="legend-dot" style="background:var(--c-food)"></span>Food</span><span class="stat-val" id="s-food">4</span></div>
+    <div class="stat-row"><span class="stat-label"><span class="legend-dot" style="background:var(--c-shelter)"></span>Shelter</span><span class="stat-val" id="s-shelter">3</span></div>
+    <div class="stat-row"><span class="stat-label"><span class="legend-dot" style="background:var(--c-water)"></span>Water</span><span class="stat-val" id="s-water">4</span></div>
+    <div class="stat-row"><span class="stat-label"><span class="legend-dot" style="background:var(--c-rescue)"></span>Rescue</span><span class="stat-val" id="s-rescue">2</span></div>
+    <div class="stat-row"><span class="stat-label"><span class="legend-dot" style="background:var(--c-education)"></span>Education</span><span class="stat-val" id="s-education">3</span></div>
+    <div class="stat-row"><span class="stat-label"><span class="legend-dot" style="background:var(--c-clothing)"></span>Clothing</span><span class="stat-val" id="s-clothing">2</span></div>
+    <div class="stat-row"><span class="stat-label"><span class="legend-dot" style="background:var(--c-sanitation)"></span>Sanitation</span><span class="stat-val" id="s-sanitation">1</span></div>
+  </div>
+
+  <!-- Weather Banner -->
+  <div id="weather-banner">🌤 Weather overlay active — Wind: 12 km/h NE · Temp: 38°C · Humidity: 68%</div>
+
+  <!-- Legend -->
+  <div id="legend">
+    <div class="legend-item"><span class="legend-dot" style="background:var(--c-medical)"></span>Medical</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--c-food)"></span>Food</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--c-shelter)"></span>Shelter</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--c-water)"></span>Water</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--c-rescue)"></span>Rescue</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--c-education)"></span>Education</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--c-clothing)"></span>Clothing</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--c-sanitation)"></span>Sanitation</div>
+    <div class="legend-sep"></div>
+    <div class="legend-note"><span class="legend-big"></span>Large = High urgency</div>
+    <div class="legend-note" id="legend-3d-hint" style="display:none">🏢 3D buildings visible at zoom 14+</div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────
+const CATS = {
+  medical:    { color: '#ef4444', label: 'Medical' },
+  food:       { color: '#f97316', label: 'Food' },
+  shelter:    { color: '#3b82f6', label: 'Shelter' },
+  water:      { color: '#06b6d4', label: 'Water' },
+  rescue:     { color: '#8b5cf6', label: 'Rescue' },
+  education:  { color: '#10b981', label: 'Education' },
+  clothing:   { color: '#f59e0b', label: 'Clothing' },
+  sanitation: { color: '#84cc16', label: 'Sanitation' },
+};
+
+const MOCK_NEEDS = [
+  { id:1, lng:72.5714, lat:23.0225, cat:'medical',   urgency:'high', title:'Emergency Medical Aid', desc:'50+ flood victims need urgent medical attention in Sabarmati area.', ngo:'Red Cross Gujarat', time:'12 min ago' },
+  { id:2, lng:72.6119, lat:23.0450, cat:'food',      urgency:'high', title:'Food Distribution Needed', desc:'300 families displaced — food running out in relief camp.', ngo:'Akshaya Patra', time:'28 min ago' },
+  { id:3, lng:72.5280, lat:22.9820, cat:'water',     urgency:'high', title:'Clean Water Shortage', desc:'Contaminated groundwater, 2,000 residents without safe water.', ngo:'Water Aid India', time:'1 hr ago' },
+  { id:4, lng:72.5850, lat:23.0650, cat:'shelter',   urgency:'med',  title:'Temporary Shelter Required', desc:'140 people need tarpaulins and shelter material.', ngo:'Shelter India', time:'2 hr ago' },
+  { id:5, lng:72.6450, lat:22.9950, cat:'rescue',    urgency:'high', title:'Flood Rescue Operation', desc:'Stranded families reported in low-lying areas near canal.', ngo:'NDRF Gujarat', time:'5 min ago' },
+  { id:6, lng:72.4900, lat:23.1000, cat:'education', urgency:'low',  title:'School Supplies Needed', desc:'School reopening after flood — no books, uniforms or stationery.', ngo:'Teach For India', time:'3 hr ago' },
+  { id:7, lng:72.6700, lat:23.0300, cat:'clothing',  urgency:'med',  title:'Clothing Drive Required', desc:'500+ adults and children need dry clothing and blankets.', ngo:'Goonj Gujarat', time:'1 hr ago' },
+  { id:8, lng:72.5400, lat:22.9600, cat:'sanitation',urgency:'med',  title:'Sanitation Kits Needed', desc:'Relief camp has poor sanitation — hygiene kits required urgently.', ngo:'Sulabh International', time:'4 hr ago' },
+  { id:9, lng:72.7100, lat:23.0800, cat:'medical',   urgency:'med',  title:'Medicine Supply Needed', desc:'Dialysis patients in Naroda need critical medicines.', ngo:'Zydus Foundation', time:'45 min ago' },
+  { id:10, lng:72.5550, lat:23.1200, cat:'food',     urgency:'med',  title:'Mid-Day Meal Disrupted', desc:'School meal supply disrupted for 800 students.', ngo:'Akshaya Patra', time:'2 hr ago' },
+  { id:11, lng:72.4600, lat:23.0700, cat:'water',    urgency:'med',  title:'Water Tanker Required', desc:'3 villages awaiting water tanker supply.', ngo:'Water Aid India', time:'3 hr ago' },
+  { id:12, lng:72.6300, lat:22.9500, cat:'shelter',  urgency:'high', title:'Collapsed Roof Emergency', desc:'2 families displaced after roof collapse in old city.', ngo:'CRY India', time:'18 min ago' },
+  { id:13, lng:72.5100, lat:23.0100, cat:'rescue',   urgency:'low',  title:'Animal Rescue Needed', desc:'Cattle stranded on elevated platform near floodwater.', ngo:'HSI India', time:'5 hr ago' },
+  { id:14, lng:72.7300, lat:23.1100, cat:'education',urgency:'low',  title:'Digital Access Gap', desc:'Children lack devices for online classes post-disaster.', ngo:'Digital Empowerment Foundation', time:'6 hr ago' },
+  { id:15, lng:72.5900, lat:23.0200, cat:'clothing', urgency:'low',  title:'Winter Prep Clothing', desc:'Pre-winter clothing drive for homeless community.', ngo:'Goonj Gujarat', time:'5 hr ago' },
+
+  // Mumbai
+  { id:16, lng:72.8777, lat:19.0760, cat:'medical',  urgency:'high', title:'Dharavi Medical Camp', desc:'Dengue outbreak — immediate medical response needed.', ngo:'MSF India', time:'8 min ago' },
+  { id:17, lng:72.9100, lat:19.1000, cat:'food',     urgency:'high', title:'Hunger Relief Needed', desc:'400 daily wage workers without food for 3 days.', ngo:'Robin Hood Army', time:'1 hr ago' },
+  { id:18, lng:72.8400, lat:19.0500, cat:'water',    urgency:'med',  title:'Water Contamination', desc:'Sewer overflow contaminating drinking water in Dharavi.', ngo:'Water Aid India', time:'2 hr ago' },
+
+  // Vadodara
+  { id:19, lng:73.1812, lat:22.3072, cat:'rescue',   urgency:'high', title:'Flood Stranded Families', desc:'Vishwamitri flood — 30 families trapped.', ngo:'NDRF', time:'3 min ago' },
+  { id:20, lng:73.2000, lat:22.3200, cat:'shelter',  urgency:'high', title:'Shelter Camp Full', desc:'Existing camp at capacity — need new location.', ngo:'Red Cross', time:'22 min ago' },
+
+  // Rajkot
+  { id:21, lng:70.8022, lat:22.3039, cat:'medical',  urgency:'med',  title:'Mobile Medical Unit', desc:'Rural outreach — shortage of doctors.', ngo:'Rotary Club Rajkot', time:'4 hr ago' },
+  { id:22, lng:70.8200, lat:22.2900, cat:'sanitation',urgency:'med', title:'Open Defecation Area', desc:'Post-flood sanitation emergency in 4 villages.', ngo:'Sulabh', time:'5 hr ago' },
+
+  // Surat
+  { id:23, lng:72.8311, lat:21.1702, cat:'education',urgency:'low',  title:'Textbook Distribution', desc:'1200 flood-affected students need books.', ngo:'Teach For India', time:'7 hr ago' },
+  { id:24, lng:72.8500, lat:21.1900, cat:'food',     urgency:'med',  title:'Community Kitchen Needed', desc:'Migrant workers without food access.', ngo:'Akshaya Patra', time:'3 hr ago' },
+];
+
+// ── STATE (declared first to avoid TDZ errors from onclick handlers) ──
+let activeFilter = 'all';
+let heatmapOn    = false;
+let weatherOn    = false;
+let is3D         = false;
+let currentPopup = null;
+let countdown    = 30;
+let refreshInterval;
+
+// ── MAP INIT ──────────────────────────────────────────────────────────
+if (typeof maplibregl === 'undefined') {
+  document.getElementById('map').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:12px;color:#6b7280;font-family:sans-serif"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p style="font-size:14px">Map library failed to load.<br>Please open this file in a browser with internet access.</p></div>';
+  throw new Error('maplibregl not available');
+}
+const map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://tiles.openfreemap.org/styles/liberty',
+  center: [72.58, 23.02],
+  zoom: 9,
+  maxZoom: 20,
+  minZoom: 3,
+});
+
+map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-left');
+map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: 'metric' }), 'bottom-right');
+map.addControl(new maplibregl.FullscreenControl(), 'top-left');
+
+// ── BUILD GEOJSON ─────────────────────────────────────────────────────
+function buildGeoJSON(filter) {
+  const items = filter === 'all' ? MOCK_NEEDS : MOCK_NEEDS.filter(n => n.cat === filter);
+  return {
+    type: 'FeatureCollection',
+    features: items.map(n => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [n.lng, n.lat] },
+      properties: {
+        id: n.id, cat: n.cat, urgency: n.urgency,
+        title: n.title, desc: n.desc, ngo: n.ngo, time: n.time,
+        color: CATS[n.cat].color,
+        radius: n.urgency === 'high' ? 14 : n.urgency === 'med' ? 10 : 7,
+      }
+    }))
+  };
+}
+
+// ── LAYERS ────────────────────────────────────────────────────────────
+map.on('load', () => {
+  // Source
+  map.addSource('needs', {
+    type: 'geojson',
+    data: buildGeoJSON('all'),
+    cluster: true,
+    clusterMaxZoom: 12,
+    clusterRadius: 50,
+  });
+
+  // Cluster background
+  map.addLayer({
+    id: 'clusters',
+    type: 'circle',
+    source: 'needs',
+    filter: ['has', 'point_count'],
+    paint: {
+      'circle-color': ['step', ['get','point_count'], '#6366f1','5','#8b5cf6','10','#7c3aed'],
+      'circle-radius': ['step', ['get','point_count'], 20,'5',26,'10',32],
+      'circle-stroke-width': 3,
+      'circle-stroke-color': '#fff',
+      'circle-opacity': 0.88,
+    }
+  });
+
+  // Cluster count
+  map.addLayer({
+    id: 'cluster-count',
+    type: 'symbol',
+    source: 'needs',
+    filter: ['has', 'point_count'],
+    layout: {
+      'text-field': '{point_count_abbreviated}',
+      'text-font': ['Noto Sans Bold', 'Noto Sans Regular'],
+      'text-size': 13,
+    },
+    paint: { 'text-color': '#fff' }
+  });
+
+  // Unclustered points — outer glow (high urgency)
+  map.addLayer({
+    id: 'points-glow',
+    type: 'circle',
+    source: 'needs',
+    filter: ['all', ['!', ['has','point_count']], ['==', ['get','urgency'], 'high']],
+    paint: {
+      'circle-color': ['get','color'],
+      'circle-radius': 20,
+      'circle-opacity': 0.18,
+      'circle-stroke-width': 0,
+    }
+  });
+
+  // Unclustered points — main
+  map.addLayer({
+    id: 'points',
+    type: 'circle',
+    source: 'needs',
+    filter: ['!', ['has','point_count']],
+    paint: {
+      'circle-color': ['get','color'],
+      'circle-radius': ['get','radius'],
+      'circle-stroke-width': 2.5,
+      'circle-stroke-color': '#fff',
+      'circle-opacity': 0.92,
+    }
+  });
+
+  // Heatmap layer (hidden by default)
+  map.addLayer({
+    id: 'heatmap',
+    type: 'heatmap',
+    source: 'needs',
+    maxzoom: 14,
+    layout: { visibility: 'none' },
+    paint: {
+      'heatmap-weight': ['interpolate',['linear'],['get','radius'], 7,0.4, 14,1],
+      'heatmap-intensity': ['interpolate',['linear'],['zoom'], 0,1, 12,3],
+      'heatmap-color': ['interpolate',['linear'],['heatmap-density'],
+        0,'rgba(236,244,255,0)',
+        0.2,'rgba(147,197,253,0.6)',
+        0.4,'rgba(99,160,252,0.7)',
+        0.6,'rgba(239,130,68,0.8)',
+        0.8,'rgba(239,68,68,0.85)',
+        1,'rgba(185,28,28,0.9)'
+      ],
+      'heatmap-radius': ['interpolate',['linear'],['zoom'], 3,15, 12,40],
+      'heatmap-opacity': 0.78,
+    }
+  }, 'points');
+
+  // ── INTERACTIONS ──
+  // Cluster click → zoom (MapLibre v4: Promise-based, no callback)
+  map.on('click', 'clusters', async (e) => {
+    const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+    const clusterId = features[0].properties.cluster_id;
+    try {
+      const zoom = await map.getSource('needs').getClusterExpansionZoom(clusterId);
+      map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom + 1, duration: 500 });
+    } catch (err) { console.warn('Cluster zoom error:', err); }
+  });
+
+  // Point click → popup
+  map.on('click', 'points', (e) => {
+    const f = e.features[0];
+    const p = f.properties;
+    if (currentPopup) currentPopup.remove();
+    const urgencyClass = p.urgency === 'high' ? 'urgency-high' : p.urgency === 'med' ? 'urgency-med' : 'urgency-low';
+    const urgencyLabel = p.urgency === 'high' ? '🔴 High Urgency' : p.urgency === 'med' ? '🟠 Medium' : '🟢 Low';
+    const catColor = CATS[p.cat].color;
+
+    const html = `
+      <div class="popup-header">
+        <div class="popup-cat" style="background:${catColor}22;color:${catColor}">
+          ${CATS[p.cat].label}
+        </div>
+        <div class="popup-title">${p.title}</div>
+      </div>
+      <div class="popup-body">${p.desc}<br><br><strong>NGO:</strong> ${p.ngo}</div>
+      <div class="popup-footer">
+        <span class="urgency-badge ${urgencyClass}">${urgencyLabel}</span>
+        <span style="color:#9ca3af">${p.time}</span>
+      </div>
+    `;
+    currentPopup = new maplibregl.Popup({ closeButton: true, maxWidth: '280px', offset: 15 })
+      .setLngLat(f.geometry.coordinates)
+      .setHTML(html)
+      .addTo(map);
+  });
+
+  // Cursor
+  ['points','clusters'].forEach(l => {
+    map.on('mouseenter', l, () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', l, () => map.getCanvas().style.cursor = '');
+  });
+
+  // ── 3D BUILDINGS ──
+  // The liberty style already ships with a 'building-3d' fill-extrusion layer
+  // using source 'openmaptiles'. Just hide it by default and toggle visibility.
+  if (map.getLayer('building-3d')) {
+    map.setLayoutProperty('building-3d', 'visibility', 'none');
+    map.setPaintProperty('building-3d', 'fill-extrusion-color', [
+      'interpolate', ['linear'], ['get', 'render_height'],
+      0, '#dde4ee', 20, '#c9d3e0', 60, '#b3c0d1', 120, '#9aadc4', 200, '#7f99b8'
+    ]);
+    map.setPaintProperty('building-3d', 'fill-extrusion-opacity', 0.88);
+  }
+});
+
+// ── FILTER ────────────────────────────────────────────────────────────
+function setFilter(cat) {
+  activeFilter = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.cat === cat);
+  });
+  if (map.getSource('needs')) {
+    map.getSource('needs').setData(buildGeoJSON(cat));
+    updateCount(cat);
+  }
+  if (currentPopup) currentPopup.remove();
+}
+
+function updateCount(cat) {
+  const count = cat === 'all' ? MOCK_NEEDS.length : MOCK_NEEDS.filter(n => n.cat === cat).length;
+  document.getElementById('count-text').textContent = `${count} active needs`;
+}
+
+// ── HEATMAP ───────────────────────────────────────────────────────────
+function toggleHeatmap() {
+  heatmapOn = !heatmapOn;
+  const btn = document.getElementById('btn-heatmap');
+  btn.classList.toggle('active', heatmapOn);
+  if (map.getLayer('heatmap')) {
+    map.setLayoutProperty('heatmap', 'visibility', heatmapOn ? 'visible' : 'none');
+    map.setLayoutProperty('points', 'visibility', heatmapOn ? 'none' : 'visible');
+    map.setLayoutProperty('points-glow', 'visibility', heatmapOn ? 'none' : 'visible');
+  }
+}
+
+// ── WEATHER ───────────────────────────────────────────────────────────
+function toggleWeather() {
+  weatherOn = !weatherOn;
+  const btn = document.getElementById('btn-weather');
+  btn.classList.toggle('active', weatherOn);
+  document.getElementById('weather-banner').style.display = weatherOn ? 'block' : 'none';
+}
+
+// ── 3D TOGGLE ────────────────────────────────────────────────────────
+function toggle3D() {
+  is3D = !is3D;
+  const btn = document.getElementById('btn-3d');
+  btn.classList.toggle('active', is3D);
+  btn.querySelector('.btn-label').textContent = is3D ? '2D View' : '3D View';
+
+  if (is3D) {
+    // Zoom to at least 15.5 so buildings (minzoom:14) are visible, then pitch
+    const targetZoom = Math.max(map.getZoom(), 15.5);
+    map.easeTo({
+      pitch: 58,
+      bearing: -20,
+      zoom: targetZoom,
+      duration: 1400,
+      easing: t => t < 0.5 ? 2*t*t : -1+(4-2*t)*t
+    });
+    // Show the existing building-3d layer from the liberty style
+    if (map.getLayer('building-3d')) {
+      map.setLayoutProperty('building-3d', 'visibility', 'visible');
+    }
+    document.getElementById('legend-3d-hint').style.display = 'flex';
+  } else {
+    map.easeTo({ pitch: 0, bearing: 0, duration: 1000 });
+    if (map.getLayer('building-3d')) {
+      map.setLayoutProperty('building-3d', 'visibility', 'none');
+    }
+    document.getElementById('legend-3d-hint').style.display = 'none';
+  }
+}
+
+
+
+// ── REFRESH ───────────────────────────────────────────────────────────
+function doRefresh() {
+  const icon = document.getElementById('refresh-icon');
+  icon.classList.add('spinning');
+  setTimeout(() => icon.classList.remove('spinning'), 800);
+  countdown = 30;
+  // Simulate fetching new data (jitter existing points slightly)
+  MOCK_NEEDS.forEach(n => {
+    n.lng += (Math.random() - 0.5) * 0.001;
+    n.lat += (Math.random() - 0.5) * 0.001;
+  });
+  if (map.getSource('needs')) map.getSource('needs').setData(buildGeoJSON(activeFilter));
+}
+
+refreshInterval = setInterval(() => {
+  countdown--;
+  document.getElementById('refresh-timer').textContent = `↻ ${countdown}s`;
+  if (countdown <= 0) { doRefresh(); }
+}, 1000);
+
+// ── SEARCH ────────────────────────────────────────────────────────────
+const LOCATIONS = [
+  { name: 'Dharavi, Mumbai', lng: 72.855, lat: 19.043 },
+  { name: 'Ahmedabad, Gujarat', lng: 72.5714, lat: 23.0225 },
+  { name: 'Vadodara, Gujarat', lng: 73.1812, lat: 22.3072 },
+  { name: 'Rajkot, Gujarat', lng: 70.8022, lat: 22.3039 },
+  { name: 'Surat, Gujarat', lng: 72.8311, lat: 21.1702 },
+  { name: 'Mumbai, Maharashtra', lng: 72.8777, lat: 19.0760 },
+  { name: 'Sabarmati, Ahmedabad', lng: 72.5714, lat: 23.0800 },
+  { name: 'Naroda, Ahmedabad', lng: 72.6500, lat: 23.0800 },
+  { name: 'Anand, Gujarat', lng: 72.9342, lat: 22.5645 },
+  { name: 'Bhavnagar, Gujarat', lng: 72.1519, lat: 21.7645 },
+  { name: 'Gandhinagar, Gujarat', lng: 72.6369, lat: 23.2156 },
+  { name: 'Junagadh, Gujarat', lng: 70.4579, lat: 21.5222 },
+];
+
+function onSearch(val) {
+  const box = document.getElementById('search-results');
+  if (!val.trim()) { box.style.display = 'none'; return; }
+  const matches = LOCATIONS.filter(l => l.name.toLowerCase().includes(val.toLowerCase()));
+  if (!matches.length) { box.style.display = 'none'; return; }
+  box.innerHTML = matches.map(m => `
+    <div class="search-item" onmousedown="flyTo(${m.lng},${m.lat},'${m.name}')">
+      <div class="search-item-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+      </div>
+      ${m.name}
+    </div>
+  `).join('');
+  box.style.display = 'block';
+}
+
+function flyTo(lng, lat, name) {
+  map.flyTo({ center: [lng, lat], zoom: 11, duration: 1200, essential: true });
+  document.getElementById('search-input').value = name;
+  document.getElementById('search-results').style.display = 'none';
+}
+
+function hideResults() {
+  setTimeout(() => { document.getElementById('search-results').style.display = 'none'; }, 150);
+}
+</script>
+</body>
+</html>

@@ -1,20 +1,48 @@
 import { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Map as MapIcon, MapPin, RefreshCw, Navigation } from 'lucide-react';
+import { Map as MapIcon, MapPin, RefreshCw, Navigation, Layers } from 'lucide-react';
 
 const API_BASE = '/api/v1';
+
+const MAP_STYLES = {
+  dark: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attribution: '&copy; OSM &copy; CARTO', label: 'Dark' },
+  light: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', attribution: '&copy; OSM &copy; CARTO', label: 'Light' },
+  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri', label: 'Satellite' },
+};
+
+const CAT_COLORS = {
+  medical: '#EF4444', food: '#F97316', shelter: '#3B82F6',
+  water: '#06B6D4', rescue: '#A855F7', education: '#10B981',
+  clothing: '#EAB308', sanitation: '#14B8A6', other: '#6B7280',
+};
 
 export default function MapPage() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersLayerRef = useRef(null);
   const myLocMarkerRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const [needs, setNeeds] = useState([]);
   const [myLocation, setMyLocation] = useState(null);
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [locating, setLocating] = useState(false);
+  const [mapStyle, setMapStyle] = useState('dark');
+
+  // Sync with site theme
+  useEffect(() => {
+    const syncTheme = () => {
+      const theme = document.documentElement.getAttribute('data-theme');
+      if (mapStyle !== 'satellite') {
+        setMapStyle(theme === 'dark' ? 'dark' : 'light');
+      }
+    };
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, [mapStyle]);
 
   // Load needs for map
   async function loadNeeds() {
@@ -84,16 +112,27 @@ export default function MapPage() {
     if (!mapRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapRef.current).setView([22.0, 73.5], 6);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OSM &copy; CARTO', maxZoom: 19,
+    const style = MAP_STYLES[mapStyle] || MAP_STYLES.dark;
+    tileLayerRef.current = L.tileLayer(style.url, {
+      attribution: style.attribution, maxZoom: 19,
     }).addTo(map);
 
     markersLayerRef.current = L.layerGroup().addTo(map);
     mapInstanceRef.current = map;
     setTimeout(() => map.invalidateSize(), 200);
 
-    return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; } };
+    return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; tileLayerRef.current = null; } };
   }, []);
+
+  // Switch tile layer
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !tileLayerRef.current) return;
+    const style = MAP_STYLES[mapStyle] || MAP_STYLES.dark;
+    map.removeLayer(tileLayerRef.current);
+    tileLayerRef.current = L.tileLayer(style.url, { attribution: style.attribution, maxZoom: 19 }).addTo(map);
+    tileLayerRef.current.bringToBack();
+  }, [mapStyle]);
 
   // Update markers
   useEffect(() => {
@@ -102,14 +141,8 @@ export default function MapPage() {
     if (!map || !layer) return;
     layer.clearLayers();
 
-    const catColors = {
-      medical: '#EF4444', food: '#F97316', shelter: '#3B82F6',
-      water: '#06B6D4', rescue: '#A855F7', education: '#10B981',
-      clothing: '#EAB308', sanitation: '#14B8A6', other: '#6B7280',
-    };
-
     needs.forEach(n => {
-      const color = catColors[n.category] || '#6B7280';
+      const color = CAT_COLORS[n.category] || '#6B7280';
       const r = 5 + n.urgency * 1.5;
 
       const marker = L.circleMarker([n.latitude, n.longitude], {
@@ -175,7 +208,35 @@ export default function MapPage() {
         </button>
       </div>
 
-      {/* Category Filters */}
+      {/* Map Style + Category Filters */}
+      <div style={{ display: 'flex', gap: '6px', padding: '0 16px 6px', overflowX: 'auto', flexShrink: 0, alignItems: 'center' }}>
+        {/* Style Toggle */}
+        <div style={{
+          display: 'flex', borderRadius: '20px', overflow: 'hidden',
+          border: '1px solid var(--border-color)', background: 'var(--bg-input)', flexShrink: 0,
+        }}>
+          {Object.entries(MAP_STYLES).map(([key, style]) => (
+            <button
+              key={key}
+              onClick={() => setMapStyle(key)}
+              style={{
+                padding: '4px 10px', border: 'none', fontSize: '10px', fontWeight: 600, cursor: 'pointer',
+                fontFamily: 'inherit',
+                background: mapStyle === key ? 'var(--accent)' : 'transparent',
+                color: mapStyle === key ? '#fff' : 'var(--text-muted)',
+                transition: 'all 0.2s',
+                display: 'flex', alignItems: 'center', gap: '3px',
+              }}
+            >
+              {key === 'satellite' && <Layers size={10} />}
+              {style.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ width: '1px', height: '18px', background: 'var(--border-color)', flexShrink: 0 }}></div>
+      </div>
+
       <div style={{ display: 'flex', gap: '6px', padding: '0 16px 10px', overflowX: 'auto', flexShrink: 0 }}>
         <button
           onClick={() => setFilter('')}
@@ -193,9 +254,13 @@ export default function MapPage() {
               padding: '5px 12px', borderRadius: '20px', border: '1px solid var(--border-color)',
               background: filter === c ? 'var(--accent)' : 'transparent',
               color: filter === c ? '#fff' : 'var(--text-secondary)',
-              fontSize: '11px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', textTransform: 'capitalize'
+              fontSize: '11px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', textTransform: 'capitalize',
+              display: 'flex', alignItems: 'center', gap: '4px',
             }}
-          >{c}</button>
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: CAT_COLORS[c] }}></span>
+            {c}
+          </button>
         ))}
       </div>
 
@@ -218,6 +283,7 @@ export default function MapPage() {
             </span>
           ))}
         <span>○ = High urgency</span>
+        <span style={{ fontWeight: 600 }}>{MAP_STYLES[mapStyle]?.label}</span>
       </div>
     </div>
   );

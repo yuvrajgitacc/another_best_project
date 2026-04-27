@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.heat';
 import { needs as needsApi, analytics } from '../services/api';
-import { Map as MapIcon, RefreshCw, Flame, Search, X, CloudRain } from 'lucide-react';
+import { Map as MapIcon, RefreshCw, Flame, Search, X, CloudRain, Layers, Box } from 'lucide-react';
 import {
   getOWMTileUrl, fetchWeatherWithAlerts,
   WEATHER_LAYERS, INDIA_CENTER,
@@ -11,12 +11,38 @@ import {
 
 const OWM_API_KEY = import.meta.env.VITE_OWM_API_KEY || '';
 
+// ── Tile Layer Definitions ───────────────────────────────────────────
+const MAP_STYLES = {
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    label: 'Dark',
+  },
+  light: {
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    label: 'Light',
+  },
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; Esri &copy; DigitalGlobe',
+    label: 'Satellite',
+  },
+};
+
+const CAT_COLORS = {
+  medical: '#EF4444', food: '#F97316', shelter: '#3B82F6',
+  water: '#06B6D4', rescue: '#A855F7', education: '#10B981',
+  clothing: '#EAB308', sanitation: '#14B8A6', other: '#6B7280',
+};
+
 export default function MapPage() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersLayerRef = useRef(null);
   const heatLayerRef = useRef(null);
   const weatherLayerRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const searchMarkerRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const pollRef = useRef(null);
@@ -31,6 +57,10 @@ export default function MapPage() {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
 
+  // Map style: syncs with theme + manual satellite toggle
+  const [mapStyle, setMapStyle] = useState('dark');
+  const [is3D, setIs3D] = useState(false);
+
   // Weather state
   const [showWeather, setShowWeather] = useState(false);
   const [activeWeatherLayer, setActiveWeatherLayer] = useState('precipitation_new');
@@ -38,6 +68,21 @@ export default function MapPage() {
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [mapCenter, setMapCenter] = useState({ lat: INDIA_CENTER.lat, lng: INDIA_CENTER.lng });
 
+  // ── Sync map style with site theme ─────────────────────────────────
+  useEffect(() => {
+    const syncTheme = () => {
+      const theme = document.documentElement.getAttribute('data-theme');
+      if (mapStyle !== 'satellite') {
+        setMapStyle(theme === 'dark' ? 'dark' : 'light');
+      }
+    };
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, [mapStyle]);
+
+  // ── Data Loading ───────────────────────────────────────────────────
   useEffect(() => { loadMapData(); }, [filter]);
 
   useEffect(() => {
@@ -61,9 +106,8 @@ export default function MapPage() {
     setLoading(false);
   }
 
-  // Weather alert fetch
+  // ── Weather ────────────────────────────────────────────────────────
   const loadWeatherAlert = useCallback(async (center = mapCenter) => {
-    // Only fetch real weather data when API key is configured
     if (!OWM_API_KEY) return;
     setWeatherLoading(true);
     const result = await fetchWeatherWithAlerts(center.lat, center.lng, OWM_API_KEY);
@@ -71,7 +115,6 @@ export default function MapPage() {
     setWeatherLoading(false);
   }, [mapCenter]);
 
-  // Poll weather every 5 minutes when overlay is on
   useEffect(() => {
     if (!showWeather) {
       if (weatherPollRef.current) clearInterval(weatherPollRef.current);
@@ -82,7 +125,7 @@ export default function MapPage() {
     return () => { if (weatherPollRef.current) clearInterval(weatherPollRef.current); };
   }, [showWeather, loadWeatherAlert]);
 
-  // Initialize map
+  // ── Initialize Map ─────────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
@@ -91,8 +134,9 @@ export default function MapPage() {
       attributionControl: true,
     }).setView([22.0, 73.5], 6);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
+    const style = MAP_STYLES[mapStyle] || MAP_STYLES.dark;
+    tileLayerRef.current = L.tileLayer(style.url, {
+      attribution: style.attribution,
       maxZoom: 19,
     }).addTo(map);
 
@@ -100,7 +144,6 @@ export default function MapPage() {
     mapInstanceRef.current = map;
     setTimeout(() => map.invalidateSize(), 200);
 
-    // Track center for weather fetch
     map.on('moveend', () => {
       const c = map.getCenter();
       setMapCenter({ lat: c.lat, lng: c.lng });
@@ -113,11 +156,27 @@ export default function MapPage() {
         markersLayerRef.current = null;
         heatLayerRef.current = null;
         weatherLayerRef.current = null;
+        tileLayerRef.current = null;
       }
     };
   }, []);
 
-  // Weather tile layer
+  // ── Switch Tile Layer when style changes ───────────────────────────
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !tileLayerRef.current) return;
+
+    const style = MAP_STYLES[mapStyle] || MAP_STYLES.dark;
+    map.removeLayer(tileLayerRef.current);
+    tileLayerRef.current = L.tileLayer(style.url, {
+      attribution: style.attribution,
+      maxZoom: 19,
+    }).addTo(map);
+    // Push tile layer to back so markers are on top
+    tileLayerRef.current.bringToBack();
+  }, [mapStyle]);
+
+  // ── Weather Tile Layer ─────────────────────────────────────────────
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -132,7 +191,7 @@ export default function MapPage() {
     }
   }, [showWeather, activeWeatherLayer]);
 
-  // Heatmap layer
+  // ── Heatmap Layer ──────────────────────────────────────────────────
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -145,21 +204,15 @@ export default function MapPage() {
     }
   }, [showHeatmap, heatmapData]);
 
-  // Need markers
+  // ── Need Markers ───────────────────────────────────────────────────
   useEffect(() => {
     const map = mapInstanceRef.current;
     const markersLayer = markersLayerRef.current;
     if (!map || !markersLayer) return;
     markersLayer.clearLayers();
 
-    const catColors = {
-      medical: '#EF4444', food: '#F97316', shelter: '#3B82F6',
-      water: '#06B6D4', rescue: '#A855F7', education: '#10B981',
-      clothing: '#EAB308', sanitation: '#14B8A6', other: '#6B7280',
-    };
-
     mapNeeds.forEach(need => {
-      const color = catColors[need.category] || '#6B7280';
+      const color = CAT_COLORS[need.category] || '#6B7280';
       const radius = 6 + (need.urgency * 2);
 
       const marker = L.circleMarker([need.latitude, need.longitude], {
@@ -199,7 +252,14 @@ export default function MapPage() {
     }
   }, [mapNeeds]);
 
-  // Search
+  // ── 3D Toggle (tilt map) ───────────────────────────────────────────
+  function toggle3D() {
+    setIs3D(!is3D);
+    // Leaflet doesn't have native 3D, but we can tilt for a pseudo-3D feel
+    // For now this is a placeholder — in a real GL map (MapLibre) it enables buildings
+  }
+
+  // ── Search ─────────────────────────────────────────────────────────
   function handleSearchInput(value) {
     setSearchQuery(value);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
@@ -247,19 +307,57 @@ export default function MapPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Map Style Toggle */}
+          <div style={{
+            display: 'flex', borderRadius: '8px', overflow: 'hidden',
+            border: '1px solid var(--border-color)', background: 'var(--bg-input)',
+          }}>
+            {Object.entries(MAP_STYLES).map(([key, style]) => (
+              <button
+                key={key}
+                onClick={() => setMapStyle(key)}
+                style={{
+                  padding: '6px 12px', border: 'none', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  background: mapStyle === key ? 'var(--accent)' : 'transparent',
+                  color: mapStyle === key ? '#fff' : 'var(--text-secondary)',
+                  transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                }}
+              >
+                {key === 'satellite' && <Layers size={12} />}
+                {style.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 3D Button */}
+          <button
+            className={`btn btn-sm ${is3D ? '' : 'btn-outline'}`}
+            onClick={toggle3D}
+            style={is3D ? { background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' } : { display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Box size={14} /> {is3D ? '2D View' : '3D View'}
+          </button>
+
+          {/* Weather Button */}
           <button
             className={`btn btn-sm ${showWeather ? '' : 'btn-outline'}`}
             onClick={() => setShowWeather(!showWeather)}
             style={showWeather ? { background: 'linear-gradient(135deg, #3b82f6, #0ea5e9)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' } : { display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <CloudRain size={14} /> {showWeather ? 'Hide Weather' : 'Weather Overlay'}
+            <CloudRain size={14} /> {showWeather ? 'Hide Weather' : 'Weather'}
           </button>
+
+          {/* Heatmap Button */}
           <button
             className={`btn btn-sm ${showHeatmap ? 'btn-primary' : 'btn-outline'}`}
             onClick={() => setShowHeatmap(!showHeatmap)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <Flame size={14} color={showHeatmap ? '#fff' : 'var(--accent-orange)'} /> {showHeatmap ? 'Hide' : 'Show'} Heatmap
+            <Flame size={14} color={showHeatmap ? '#fff' : 'var(--accent-orange)'} /> {showHeatmap ? 'Hide' : ''} Heatmap
           </button>
+
+          {/* Refresh */}
           <button className="btn btn-primary" onClick={loadMapData} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <RefreshCw size={14} /> Refresh
           </button>
@@ -304,7 +402,6 @@ export default function MapPage() {
               </div>
             </div>
             {weatherLoading && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Updating...</span>}
-            {!OWM_API_KEY && <span style={{ fontSize: '10px', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '8px' }}>Demo Mode</span>}
           </div>
         )}
 
@@ -333,8 +430,9 @@ export default function MapPage() {
               key={cat}
               className={`btn btn-sm ${filter === cat ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setFilter(filter === cat ? '' : cat)}
-              style={{ textTransform: 'capitalize' }}
+              style={{ textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: '5px' }}
             >
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: CAT_COLORS[cat] }}></span>
               {cat}
             </button>
           ))}
@@ -386,7 +484,7 @@ export default function MapPage() {
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <div style={{ fontWeight: 600 }}>Location: {r.display_name.split(',').slice(0, 2).join(', ')}</div>
+                  <div style={{ fontWeight: 600 }}>📍 {r.display_name.split(',').slice(0, 2).join(', ')}</div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                     {r.display_name}
                   </div>
@@ -406,11 +504,7 @@ export default function MapPage() {
 
         {/* Legend */}
         <div style={{ display: 'flex', gap: '16px', marginTop: '12px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-secondary)' }}>
-          {Object.entries({
-            medical: '#EF4444', food: '#F97316', shelter: '#3B82F6',
-            water: '#06B6D4', rescue: '#A855F7', education: '#10B981',
-            clothing: '#EAB308', sanitation: '#14B8A6',
-          }).map(([cat, color]) => (
+          {Object.entries(CAT_COLORS).filter(([k]) => k !== 'other').map(([cat, color]) => (
             <span key={cat} style={{ display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'capitalize' }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, display: 'inline-block' }}></span>
               {cat}
@@ -418,6 +512,9 @@ export default function MapPage() {
           ))}
           <span style={{ marginLeft: '16px' }}>Large circle = High urgency</span>
           {showWeather && <span style={{ marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}><CloudRain size={12} color="var(--accent)" /> Weather overlay active</span>}
+          <span style={{ marginLeft: '8px', fontWeight: 600, color: 'var(--text-muted)' }}>
+            Map: {MAP_STYLES[mapStyle]?.label}
+          </span>
         </div>
       </div>
     </>
