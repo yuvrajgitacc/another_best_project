@@ -21,7 +21,7 @@ from ..schemas import (
     VolunteerResponse, VolunteerBriefResponse,
     AssignmentResponse, MessageResponse, VolunteerAvailability,
 )
-from ..middleware.auth import get_current_user, get_current_admin
+from ..middleware.auth import get_current_user, get_optional_user
 from ..services.geo_service import haversine_distance, bounding_box
 
 logger = logging.getLogger(__name__)
@@ -128,7 +128,7 @@ async def list_volunteers(
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _user: Optional[User] = Depends(get_optional_user),
 ):
     """
     List volunteers with filtering by availability, skills, vehicle, and proximity.
@@ -171,9 +171,9 @@ async def list_volunteers(
 async def list_volunteers_for_map(
     availability: Optional[VolunteerAvailability] = Query(default=None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin),
+    _user: Optional[User] = Depends(get_optional_user),
 ):
-    """Lightweight response for map markers. Admin only."""
+    """Lightweight response for map markers (public dashboard mode)."""
     query = db.query(Volunteer).filter(
         Volunteer.latitude.isnot(None),
         Volunteer.longitude.isnot(None),
@@ -215,7 +215,7 @@ async def get_my_profile(
 async def get_volunteer(
     volunteer_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _user: Optional[User] = Depends(get_optional_user),
 ):
     """Get a volunteer by ID."""
     vol = db.query(Volunteer).filter(Volunteer.id == volunteer_id).first()
