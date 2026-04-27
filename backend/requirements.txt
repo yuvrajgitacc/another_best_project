@@ -2,6 +2,7 @@ fastapi==0.103.2
 uvicorn==0.23.2
 gunicorn==21.2.0
 sqlalchemy==2.0.21
+sqlalchemy-libsql
 pydantic==2.4.2
 pydantic-settings==2.0.3
 python-jose[cryptography]==3.3.0
