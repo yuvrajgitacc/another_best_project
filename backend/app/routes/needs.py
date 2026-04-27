@@ -19,7 +19,7 @@ from ..schemas import (
     NeedCreateRequest, NeedUpdateRequest, NeedResponse, NeedBriefResponse,
     NeedStatus, NeedCategory, MessageResponse,
 )
-from ..middleware.auth import get_current_user, get_current_admin, get_optional_user
+from ..middleware.auth import get_optional_user
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ def _need_to_response(need: Need, db: Session) -> NeedResponse:
 async def create_need(
     body: NeedCreateRequest,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     """Create a new community need / request."""
@@ -92,7 +92,7 @@ async def create_need(
             logger.info(f"Auto-geocoded need address '{body.address}' -> ({final_lat}, {final_lon})")
 
     need = Need(
-        reported_by=current_user.id,
+        reported_by=current_user.id if current_user else None,
         title=body.title,
         description=body.description,
         category=body.category.value,
@@ -109,7 +109,7 @@ async def create_need(
 
     # Audit
     audit = AuditLog(
-        user_id=current_user.id,
+        user_id=current_user.id if current_user else None,
         action="need.created",
         entity_type="need",
         entity_id=need.id,
@@ -124,7 +124,10 @@ async def create_need(
     db.commit()
     db.refresh(need)
 
-    logger.info(f"Need created: '{need.title}' [{need.category}] urgency={need.urgency} by {current_user.name}")
+    logger.info(
+        f"Need created: '{need.title}' [{need.category}] urgency={need.urgency} "
+        f"by {(current_user.name if current_user else 'anonymous')}"
+    )
     return _need_to_response(need, db)
 
 
@@ -140,7 +143,7 @@ async def list_needs(
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _user: Optional[User] = Depends(get_optional_user),
 ):
     """
     List needs with comprehensive filtering, search, and pagination.
@@ -181,7 +184,7 @@ async def list_needs_for_map(
     category: Optional[NeedCategory] = Query(default=None),
     status_filter: Optional[NeedStatus] = Query(default=None, alias="status"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _user: Optional[User] = Depends(get_optional_user),
 ):
     """
     Lightweight endpoint for map markers — returns only essential fields.
@@ -220,7 +223,7 @@ async def get_categories():
 async def get_need(
     need_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _user: Optional[User] = Depends(get_optional_user),
 ):
     """Get a single need by ID with full details."""
     need = db.query(Need).filter(Need.id == need_id).first()
@@ -234,17 +237,15 @@ async def update_need(
     need_id: str,
     body: NeedUpdateRequest,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
-    """Update a need. Admin can update any, volunteers can only update their own."""
+    """Update a need (public dashboard mode)."""
     need = db.query(Need).filter(Need.id == need_id).first()
     if not need:
         raise HTTPException(status_code=404, detail="Need not found")
 
-    # Permission check
-    if current_user.role != "admin" and need.reported_by != current_user.id:
-        raise HTTPException(status_code=403, detail="You can only edit needs you reported")
+    # In public dashboard mode, no permission checks.
 
     # Track changes for audit
     changes = {}
@@ -269,7 +270,7 @@ async def update_need(
             "cancelled": ["open"],  # Reactivate
         }
         allowed = valid_transitions.get(need.status, [])
-        if new_status not in allowed and current_user.role != "admin":
+        if new_status not in allowed and current_user:
             raise HTTPException(
                 status_code=400,
                 detail=f"Cannot transition from '{need.status}' to '{new_status}'. Allowed: {allowed}"
@@ -285,7 +286,7 @@ async def update_need(
     # Audit
     if changes:
         audit = AuditLog(
-            user_id=current_user.id,
+            user_id=current_user.id if current_user else None,
             action="need.updated",
             entity_type="need",
             entity_id=need.id,
@@ -304,17 +305,17 @@ async def update_need(
 async def delete_need(
     need_id: str,
     request: Request,
-    current_user: User = Depends(get_current_admin),
+    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
-    """Delete a need. Admin only."""
+    """Delete a need (public dashboard mode)."""
     need = db.query(Need).filter(Need.id == need_id).first()
     if not need:
         raise HTTPException(status_code=404, detail="Need not found")
 
     # Audit before deletion
     audit = AuditLog(
-        user_id=current_user.id,
+        user_id=current_user.id if current_user else None,
         action="need.deleted",
         entity_type="need",
         entity_id=need.id,

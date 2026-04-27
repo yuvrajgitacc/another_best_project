@@ -18,7 +18,7 @@ from ..schemas import (
     DashboardSummary, CategoryBreakdown, HeatmapPoint,
     TimelinePoint,
 )
-from ..middleware.auth import get_current_user, get_current_admin
+from ..middleware.auth import get_optional_user
 from ..services import gemini_service
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/analytics", tags=["Analytics"])
 @router.get("/summary", response_model=DashboardSummary)
 async def get_dashboard_summary(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    _user=Depends(get_optional_user),
 ):
     """High-level dashboard statistics."""
     # Need counts
@@ -96,7 +96,7 @@ async def get_dashboard_summary(
 @router.get("/categories", response_model=List[CategoryBreakdown])
 async def get_category_breakdown(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    _user=Depends(get_optional_user),
 ):
     """Breakdown of needs by category."""
     categories = db.query(
@@ -130,7 +130,7 @@ async def get_heatmap_data(
     status_filter: Optional[str] = Query(default=None, alias="status"),
     category: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    _user=Depends(get_optional_user),
 ):
     """
     Get need locations with intensity scores for heatmap rendering.
@@ -170,7 +170,7 @@ async def get_heatmap_data(
 async def get_timeline(
     days: int = Query(default=30, ge=1, le=365),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    _user=Depends(get_optional_user),
 ):
     """Get daily need creation and resolution counts for charting."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
@@ -205,7 +205,7 @@ async def get_timeline(
 @router.get("/response-times")
 async def get_response_times(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_admin),
+    _user=Depends(get_optional_user),
 ):
     """Average response time breakdown by category. Admin only."""
     categories = db.query(Need.category).distinct().all()
@@ -243,7 +243,7 @@ async def get_response_times(
 @router.get("/ai-summary")
 async def get_ai_summary(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_admin),
+    _user=Depends(get_optional_user),
 ):
     """
     Get an AI-generated summary of current community needs.
@@ -272,7 +272,7 @@ async def get_ai_summary(
 async def get_impact_stats(
     days: int = Query(default=7, ge=1, le=90),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    _user=Depends(get_optional_user),
 ):
     """
     Impact Dashboard stats — shows what was accomplished in the last N days.

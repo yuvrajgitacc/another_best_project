@@ -20,7 +20,7 @@ from ..schemas import (
     MatchSuggestionsResponse, MatchSuggestion, VolunteerBriefResponse,
     MessageResponse,
 )
-from ..middleware.auth import get_current_user, get_current_admin
+from ..middleware.auth import get_optional_user
 from ..services.matching_engine import find_best_matches, calculate_match_score
 from ..services.geo_service import haversine_distance
 from ..services import fcm_service
@@ -35,7 +35,7 @@ async def get_match_suggestions(
     need_id: str,
     limit: int = Query(default=5, ge=1, le=20),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _user: Optional[User] = Depends(get_optional_user),
 ):
     """
     Get the top volunteer matches for a specific need.
@@ -86,7 +86,7 @@ async def get_match_suggestions(
 async def create_assignment(
     body: AssignmentCreateRequest,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -148,7 +148,7 @@ async def create_assignment(
 
     # Audit
     audit = AuditLog(
-        user_id=current_user.id,
+        user_id=current_user.id if current_user else None,
         action="assignment.created",
         entity_type="assignment",
         entity_id=assignment.id,
@@ -196,7 +196,7 @@ async def update_assignment_status(
     assignment_id: str,
     body: AssignmentStatusUpdate,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -211,10 +211,7 @@ async def update_assignment_status(
     vol = db.query(Volunteer).filter(Volunteer.id == assignment.volunteer_id).first()
     need = db.query(Need).filter(Need.id == assignment.need_id).first()
 
-    # Permission: volunteer can only update their own assignments
-    if current_user.role != "admin":
-        if not vol or vol.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Can only update your own assignment")
+    # Public dashboard mode: no permission checks.
 
     # Validate status transition
     new_status = body.status.value
@@ -276,7 +273,7 @@ async def update_assignment_status(
 
     # Audit
     audit = AuditLog(
-        user_id=current_user.id,
+        user_id=current_user.id if current_user else None,
         action=f"assignment.{new_status}",
         entity_type="assignment",
         entity_id=assignment.id,
@@ -317,7 +314,7 @@ async def update_assignment_status(
 async def get_assignment(
     assignment_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _user: Optional[User] = Depends(get_optional_user),
 ):
     """Get assignment details."""
     assignment = db.query(Assignment).filter(Assignment.id == assignment_id).first()
@@ -357,9 +354,9 @@ async def list_assignments(
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin),
+    _user: Optional[User] = Depends(get_optional_user),
 ):
-    """List all assignments with filters. Admin only."""
+    """List all assignments with filters (public dashboard mode)."""
     query = db.query(Assignment)
 
     if status_filter:

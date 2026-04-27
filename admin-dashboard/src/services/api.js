@@ -57,9 +57,9 @@ async function apiFetch(endpoint, options = {}) {
 
   if (res.status === 401) {
     clearAuth();
-    // Admin dashboard is served under /admin, so keep redirects inside that SPA.
-    window.location.href = '/admin/login';
-    throw new Error('Session expired. Please log in again.');
+    // Admin dashboard is intentionally public in production (no auth gate).
+    // If backend returns 401, surface the error instead of redirect loops.
+    throw new Error('Unauthorized (backend requires auth)');
   }
 
   if (!res.ok) {
