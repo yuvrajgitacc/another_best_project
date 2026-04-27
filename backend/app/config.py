@@ -33,18 +33,10 @@ class Settings(BaseSettings):
 
     # --- Database ---
     DATABASE_URL: str = "sqlite:///./smartalloc.db"
-    TURSO_DATABASE_URL: str = ""
-    TURSO_AUTH_TOKEN: str = ""
 
     @property
     def effective_db_url(self) -> str:
-        """Use Turso if configured, otherwise local SQLite."""
-        if self.TURSO_DATABASE_URL:
-            # Turso: libsql:// → sqlite+libsql:// with secure=true
-            url = self.TURSO_DATABASE_URL.replace("libsql://", "sqlite+libsql://")
-            if "?" not in url:
-                url += "?secure=true"
-            return url
+        """Use plain SQLite — compatible with Python 3.11 on Render."""
         return self.DATABASE_URL
 
     # --- CORS ---
