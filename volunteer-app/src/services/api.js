@@ -2,7 +2,8 @@
  * Volunteer App API service — communicates with the same backend as admin.
  */
 
-const API_BASE = '/api/v1';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE = `${BASE_URL}/api/v1`;
 
 function getToken() { return localStorage.getItem('vol_token'); }
 export function setToken(t) { localStorage.setItem('vol_token', t); }
