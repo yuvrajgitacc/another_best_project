@@ -30,8 +30,8 @@ const Footer = ({ onNavigate }) => {
     {
       title: "Products",
       links: [
-        { label: "Volunteer App", action: () => { window.location.href = 'http://localhost:5174/'; } },
-        { label: "Admin Dashboard", action: () => { window.location.href = 'http://localhost:5173/'; } },
+        { label: "Volunteer App", action: () => { window.location.href = '/SevaSetu.apk'; } },
+        { label: "Admin Dashboard", action: () => { window.location.href = '/admin/'; } },
         { label: "Resource Matching", action: null },
         { label: "Impact Reports", action: null }
       ]

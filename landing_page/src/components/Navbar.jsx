@@ -46,11 +46,11 @@ const Navbar = ({ onNavigate }) => {
   }, [scrollY]);
 
   const handleInstallApp = () => {
-    window.location.href = 'http://localhost:5174/';
+    window.location.href = '/SevaSetu.apk';
   };
 
   const handleDashboard = () => {
-    window.location.href = 'http://localhost:5173/';
+    window.location.href = '/admin/';
   };
 
   return (

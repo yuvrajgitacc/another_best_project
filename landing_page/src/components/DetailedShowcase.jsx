@@ -121,7 +121,7 @@ const DetailedShowcase = ({ onNavigate }) => {
                   Our volunteer app lets individuals find campaigns near them, register instantly, and track their contributions. Simple, fast, and impactful.
                 </p>
                 <div className="showcase-actions">
-                  <button className="btn btn-primary" onClick={() => { window.location.href = 'http://localhost:5174/'; }}>
+                  <button className="btn btn-primary" onClick={() => { window.location.href = '/SevaSetu.apk'; }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                     Install App
                   </button>
@@ -182,7 +182,7 @@ const DetailedShowcase = ({ onNavigate }) => {
                   Create campaigns, assign volunteers, track resources and generate impact reports. Full control over your NGO's operations.
                 </p>
                 <div className="showcase-actions">
-                  <button className="btn btn-primary" style={{ gap: '10px' }} onClick={() => { window.location.href = 'http://localhost:5173/'; }}>
+                  <button className="btn btn-primary" style={{ gap: '10px' }} onClick={() => { window.location.href = '/admin/'; }}>
                     Open Dashboard
                   </button>
                 </div>
