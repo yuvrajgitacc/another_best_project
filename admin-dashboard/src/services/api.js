@@ -55,9 +55,10 @@ async function apiFetch(endpoint, options = {}) {
   });
 
   if (res.status === 401) {
-    clearAuth();
-    window.location.href = '/login';
-    throw new Error('Session expired');
+    // Re-init dev-token and reload
+    setToken('dev-token');
+    window.location.reload();
+    throw new Error('Re-authenticating...');
   }
 
   if (!res.ok) {

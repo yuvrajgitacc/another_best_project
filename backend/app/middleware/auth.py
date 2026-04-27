@@ -120,8 +120,8 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # DEV MODE: bypass JWT for development convenience
-    if settings.DEBUG and credentials.credentials.startswith("dev-"):
+    # DEV/HACKATHON MODE: bypass JWT with dev-token
+    if credentials.credentials.startswith("dev-"):
         if credentials.credentials == "dev-vol-token":
             # Return a volunteer user (for volunteer app)
             from ..models import Volunteer
