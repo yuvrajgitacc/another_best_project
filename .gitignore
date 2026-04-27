@@ -38,5 +38,3 @@ Thumbs.db
 firebase-credentials.json
 
 # User exclusions
-requirements.txt
-*.md
