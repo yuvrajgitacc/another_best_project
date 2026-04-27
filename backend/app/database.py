@@ -17,7 +17,12 @@ settings = get_settings()
 db_url = settings.effective_db_url
 
 connect_args = {}
-if "sqlite" in db_url and "libsql" not in db_url:
+if "libsql" in db_url:
+    # Turso: pass auth token via connect_args
+    if settings.TURSO_AUTH_TOKEN:
+        connect_args["auth_token"] = settings.TURSO_AUTH_TOKEN
+        connect_args["secure"] = True
+elif "sqlite" in db_url:
     connect_args["check_same_thread"] = False
 
 engine = create_engine(

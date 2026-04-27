@@ -40,9 +40,8 @@ class Settings(BaseSettings):
     def effective_db_url(self) -> str:
         """Use Turso if configured, otherwise local SQLite."""
         if self.TURSO_DATABASE_URL:
-            url = self.TURSO_DATABASE_URL
-            if self.TURSO_AUTH_TOKEN:
-                url += f"?authToken={self.TURSO_AUTH_TOKEN}"
+            # Turso uses sqlite+libsql:// format
+            url = self.TURSO_DATABASE_URL.replace("libsql://", "sqlite+libsql://")
             return url
         return self.DATABASE_URL
 

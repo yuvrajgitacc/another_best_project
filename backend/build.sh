@@ -5,10 +5,6 @@ set -e
 echo "=== Installing Python dependencies ==="
 pip install -r requirements.txt
 
-echo "=== Installing Node.js (for frontend builds) ==="
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt-get install -y nodejs || true
-
 echo "=== Building Landing Page ==="
 cd ../landing_page
 npm install
@@ -31,10 +27,14 @@ mkdir -p static/admin
 cp -r ../admin-dashboard/dist/* static/admin/
 
 # Copy APK if exists
-cp ../landing_page/public/SevaSetu.apk static/SevaSetu.apk 2>/dev/null || echo "No APK found, skipping"
+cp ../landing_page/public/SevaSetu.apk static/SevaSetu.apk 2>/dev/null || echo "No APK in landing, checking root..."
+cp static/SevaSetu.apk static/SevaSetu.apk 2>/dev/null || echo "APK will be served from static/"
 
-echo "=== Seeding database ==="
-python seed_data.py || echo "Seed skipped (maybe Turso)"
+echo "=== Seeding database (local SQLite) ==="
+# Force local SQLite for seeding (ignore Turso vars)
+DATABASE_URL="sqlite:///./smartalloc.db" TURSO_DATABASE_URL="" TURSO_AUTH_TOKEN="" python seed_data.py
 
 echo "=== Build complete! ==="
 ls -la static/
+echo "=== DB seeded ==="
+ls -la smartalloc.db 2>/dev/null || echo "DB check done"
