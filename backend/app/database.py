@@ -18,10 +18,9 @@ db_url = settings.effective_db_url
 
 connect_args = {}
 if "libsql" in db_url:
-    # Turso: pass auth token via connect_args
+    # Turso: only auth_token in connect_args
     if settings.TURSO_AUTH_TOKEN:
         connect_args["auth_token"] = settings.TURSO_AUTH_TOKEN
-        connect_args["secure"] = True
 elif "sqlite" in db_url:
     connect_args["check_same_thread"] = False
 

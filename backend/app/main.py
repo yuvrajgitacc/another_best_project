@@ -192,7 +192,7 @@ async def health_check():
 # ============================================================
 # LANDING PAGE (SPA — catch-all, MUST be last!)
 # ============================================================
-if STATIC_DIR.exists():
+if STATIC_DIR.exists() and (STATIC_DIR / "assets").exists():
     # Mount static assets (JS, CSS, images)
     app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="landing-assets")
 
