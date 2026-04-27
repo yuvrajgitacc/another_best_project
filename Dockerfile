@@ -22,4 +22,6 @@ RUN chmod +x backend/build.sh && cd backend && ./build.sh
 
 EXPOSE 8080
 
+# Run from backend/ so `app.*` imports resolve
+WORKDIR /app/backend
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
