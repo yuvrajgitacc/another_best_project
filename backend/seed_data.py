@@ -102,6 +102,13 @@ def seed():
     init_db()
     db = SessionLocal()
 
+    # Idempotency: if we already have users, assume this env has been seeded.
+    existing_user = db.query(User).first()
+    if existing_user is not None:
+        print("Database already contains data — skipping seed.")
+        db.close()
+        return
+
     print("Seeding database with demo data...\n")
 
     # --- ADMIN USER ---

@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import DashboardPage from './pages/DashboardPage';
 import NeedsPage from './pages/NeedsPage';
@@ -8,18 +9,28 @@ import VolunteersPage from './pages/VolunteersPage';
 import BroadcastPage from './pages/BroadcastPage';
 import OCRPage from './pages/OCRPage';
 import MatchingPage from './pages/MatchingPage';
+import LoginPage from './pages/LoginPage';
+
+function ProtectedLayout() {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  return <Outlet />;
+}
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route index element={<DashboardPage />} />
-        <Route path="needs" element={<NeedsPage />} />
-        <Route path="map" element={<MapPage />} />
-        <Route path="volunteers" element={<VolunteersPage />} />
-        <Route path="broadcast" element={<BroadcastPage />} />
-        <Route path="ocr" element={<OCRPage />} />
-        <Route path="matching/:needId?" element={<MatchingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<ProtectedLayout />}>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="needs" element={<NeedsPage />} />
+          <Route path="map" element={<MapPage />} />
+          <Route path="volunteers" element={<VolunteersPage />} />
+          <Route path="broadcast" element={<BroadcastPage />} />
+          <Route path="ocr" element={<OCRPage />} />
+          <Route path="matching/:needId?" element={<MatchingPage />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

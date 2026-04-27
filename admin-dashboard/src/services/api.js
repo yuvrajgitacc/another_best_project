@@ -2,7 +2,8 @@
  * API service layer — all backend communication goes through here.
  */
 
-const API_BASE = '/api/v1';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE = `${BASE_URL}/api/v1`;
 
 // Get stored JWT token
 function getToken() {
@@ -56,7 +57,8 @@ async function apiFetch(endpoint, options = {}) {
 
   if (res.status === 401) {
     clearAuth();
-    window.location.href = '/login';
+    // Admin dashboard is served under /admin, so keep redirects inside that SPA.
+    window.location.href = '/admin/login';
     throw new Error('Session expired. Please log in again.');
   }
 

@@ -72,7 +72,7 @@ export default function LoginPage() {
       </p>
 
       {/* Google Sign-In */}
-      {GOOGLE_CLIENT_ID && (
+      {GOOGLE_CLIENT_ID ? (
         <>
           <div ref={googleBtnRef} style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '0 0 16px', color: 'var(--text-muted)', fontSize: '12px', width: '100%', maxWidth: '300px' }}>
@@ -81,6 +81,10 @@ export default function LoginPage() {
             <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
           </div>
         </>
+      ) : (
+        <div style={{ marginBottom: '16px', width: '100%', maxWidth: '300px', fontSize: '12px', color: 'var(--text-muted)' }}>
+          Google sign-in is not configured for this build.
+        </div>
       )}
 
       {/* Toggle */}

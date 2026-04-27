@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     # --- CORS ---
     FRONTEND_ADMIN_URL: str = "http://localhost:5173"
     FRONTEND_VOLUNTEER_URL: str = "http://localhost:5174"
+    # Optional comma-separated list of extra allowed origins (e.g. Render + Capacitor)
+    CORS_ORIGINS: str = ""
 
     # --- File Uploads ---
     UPLOAD_DIR: str = "./uploads"
@@ -66,10 +68,30 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> list[str]:
-        origins = [self.FRONTEND_ADMIN_URL, self.FRONTEND_VOLUNTEER_URL, "http://localhost:5175"]
+        origins = [
+            self.FRONTEND_ADMIN_URL,
+            self.FRONTEND_VOLUNTEER_URL,
+            "http://localhost:5175",
+            # Capacitor / WebView origins (for APK)
+            "capacitor://localhost",
+            "ionic://localhost",
+            "http://localhost",
+        ]
+
         if self.DEBUG:
             origins.append("http://localhost:3000")
-        return origins
+
+        extra = [o.strip() for o in (self.CORS_ORIGINS or "").split(",") if o.strip()]
+        origins.extend(extra)
+
+        # De-dupe while preserving order
+        seen: set[str] = set()
+        uniq: list[str] = []
+        for o in origins:
+            if o not in seen:
+                seen.add(o)
+                uniq.append(o)
+        return uniq
 
     class Config:
         env_file = "../.env"

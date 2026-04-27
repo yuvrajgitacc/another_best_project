@@ -4,6 +4,7 @@
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const API_BASE = `${BASE_URL}/api/v1`;
+const REQUEST_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS || 20000);
 
 function getToken() { return localStorage.getItem('vol_token'); }
 export function setToken(t) { localStorage.setItem('vol_token', t); }
@@ -12,15 +13,31 @@ export function getStoredUser() { const d = localStorage.getItem('vol_user'); re
 export function setStoredUser(u) { localStorage.setItem('vol_user', JSON.stringify(u)); }
 
 async function apiFetch(endpoint, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   const token = getToken();
   const headers = { ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
-  if (res.status === 401) { clearAuth(); window.location.href = '/login'; throw new Error('Session expired'); }
-  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || err.detail || `HTTP ${res.status}`); }
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers, signal: controller.signal });
+    if (res.status === 401) { clearAuth(); window.location.href = '/login'; throw new Error('Session expired'); }
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || err.detail || `HTTP ${res.status}`); }
+    return res.json();
+  } catch (e) {
+    if (e?.name === 'AbortError') {
+      throw new Error('Request timed out. Check your internet connection and backend URL.');
+    }
+    // If API base URL is missing in APK builds, make it obvious.
+    if (!BASE_URL) {
+      throw new Error('Backend URL is not configured. Set VITE_API_BASE_URL for the volunteer app build.');
+    }
+    throw e;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export const auth = {
