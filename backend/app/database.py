@@ -14,13 +14,14 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # --- Engine ---
-# check_same_thread=False is required for SQLite with FastAPI (multi-threaded)
+db_url = settings.effective_db_url
+
 connect_args = {}
-if "sqlite" in settings.DATABASE_URL:
+if "sqlite" in db_url and "libsql" not in db_url:
     connect_args["check_same_thread"] = False
 
 engine = create_engine(
-    settings.DATABASE_URL,
+    db_url,
     connect_args=connect_args,
     echo=settings.DEBUG,
     pool_pre_ping=True,
@@ -30,7 +31,7 @@ engine = create_engine(
 # Enable WAL mode and foreign keys for SQLite (better concurrency & integrity)
 @event.listens_for(engine, "connect")
 def _set_sqlite_pragma(dbapi_conn, connection_record):
-    if "sqlite" in settings.DATABASE_URL:
+    if "sqlite" in db_url and "libsql" not in db_url:
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA journal_mode=WAL;")
         cursor.execute("PRAGMA foreign_keys=ON;")

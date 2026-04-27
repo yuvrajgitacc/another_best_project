@@ -3,6 +3,7 @@ from __future__ import annotations
 """
 FastAPI Application Entry Point.
 Configures CORS, includes all routers, initializes DB on startup.
+Serves static frontend builds (landing page + admin dashboard).
 """
 
 import os
@@ -13,7 +14,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 
 from .config import get_settings
 from .database import init_db
@@ -27,6 +28,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
+
+# Static file directories (created by Render build script)
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "static"
+ADMIN_DIR = STATIC_DIR / "admin"
 
 
 # ============================================================
@@ -47,6 +53,7 @@ async def lifespan(app: FastAPI):
     logger.info("✅ Database initialized")
     logger.info(f"📁 Uploads directory: {os.path.abspath(settings.UPLOAD_DIR)}")
     logger.info(f"🌐 CORS origins: {settings.cors_origins}")
+    logger.info(f"📂 Static dir exists: {STATIC_DIR.exists()}")
 
     yield
 
@@ -75,10 +82,10 @@ app = FastAPI(
 # MIDDLEWARE
 # ============================================================
 
-# CORS
+# CORS — allow all origins in production (single-origin serving)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -127,20 +134,41 @@ app.mount("/uploads", StaticFiles(directory=str(upload_path)), name="uploads")
 
 
 # ============================================================
-# ROOT & HEALTH ENDPOINTS
+# APK DOWNLOAD
 # ============================================================
+@app.get("/SevaSetu.apk", tags=["Static"])
+async def download_apk():
+    apk_path = STATIC_DIR / "SevaSetu.apk"
+    if apk_path.exists():
+        return FileResponse(
+            str(apk_path),
+            media_type="application/vnd.android.package-archive",
+            filename="SevaSetu.apk",
+        )
+    raise HTTPException(status_code=404, detail="APK not found")
 
-@app.get("/", tags=["System"])
-async def root():
-    return {
-        "name": settings.APP_NAME,
-        "version": "1.0.0",
-        "status": "running",
-        "docs": "/docs",
-        "api_prefix": settings.API_V1_PREFIX,
-    }
+
+# ============================================================
+# ADMIN DASHBOARD (SPA)
+# ============================================================
+@app.get("/admin/{rest_of_path:path}", tags=["Static"])
+async def serve_admin(rest_of_path: str):
+    """Serve admin dashboard SPA."""
+    if ADMIN_DIR.exists():
+        # Try to serve the exact file first
+        file_path = ADMIN_DIR / rest_of_path
+        if file_path.is_file():
+            return FileResponse(str(file_path))
+        # Fallback to index.html (SPA routing)
+        index = ADMIN_DIR / "index.html"
+        if index.exists():
+            return HTMLResponse(index.read_text())
+    raise HTTPException(status_code=404, detail="Admin dashboard not built")
 
 
+# ============================================================
+# HEALTH & ROOT
+# ============================================================
 @app.get("/health", tags=["System"])
 async def health_check():
     """Health check for monitoring and load balancers."""
@@ -158,6 +186,24 @@ async def health_check():
         "status": "healthy" if db_status == "healthy" else "degraded",
         "database": db_status,
         "environment": settings.APP_ENV,
-        "gemini_configured": bool(settings.GEMINI_API_KEY),
-        "firebase_configured": Path(settings.FIREBASE_CREDENTIALS_PATH).exists(),
     }
+
+
+# ============================================================
+# LANDING PAGE (SPA — catch-all, MUST be last!)
+# ============================================================
+if STATIC_DIR.exists():
+    # Mount static assets (JS, CSS, images)
+    app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="landing-assets")
+
+@app.get("/{rest_of_path:path}", tags=["Static"])
+async def serve_landing(rest_of_path: str):
+    """Serve landing page SPA — catch-all route (must be registered last)."""
+    if STATIC_DIR.exists():
+        file_path = STATIC_DIR / rest_of_path
+        if file_path.is_file():
+            return FileResponse(str(file_path))
+        index = STATIC_DIR / "index.html"
+        if index.exists():
+            return HTMLResponse(index.read_text())
+    return {"name": settings.APP_NAME, "version": "1.0.0", "status": "running", "docs": "/docs"}

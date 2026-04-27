@@ -33,6 +33,18 @@ class Settings(BaseSettings):
 
     # --- Database ---
     DATABASE_URL: str = "sqlite:///./smartalloc.db"
+    TURSO_DATABASE_URL: str = ""
+    TURSO_AUTH_TOKEN: str = ""
+
+    @property
+    def effective_db_url(self) -> str:
+        """Use Turso if configured, otherwise local SQLite."""
+        if self.TURSO_DATABASE_URL:
+            url = self.TURSO_DATABASE_URL
+            if self.TURSO_AUTH_TOKEN:
+                url += f"?authToken={self.TURSO_AUTH_TOKEN}"
+            return url
+        return self.DATABASE_URL
 
     # --- CORS ---
     FRONTEND_ADMIN_URL: str = "http://localhost:5173"
