@@ -27,8 +27,7 @@ mkdir -p static/admin
 cp -r ../admin-dashboard/dist/* static/admin/
 
 # Copy APK if exists
-cp ../landing_page/public/SevaSetu.apk static/SevaSetu.apk 2>/dev/null || echo "No APK in landing, checking root..."
-cp static/SevaSetu.apk static/SevaSetu.apk 2>/dev/null || echo "APK will be served from static/"
+cp ../landing_page/public/SevaSetu.apk static/SevaSetu.apk 2>/dev/null || echo "No APK found — skipping"
 
 echo "=== Seeding database (local SQLite) ==="
 # Force local SQLite for seeding (ignore Turso vars)

@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
 
     # --- Firebase Cloud Messaging ---
-    FIREBASE_CREDENTIALS_PATH: str = "./firebase-credentials.json"
+    FCM_SERVER_KEY: str = ""
 
     # --- Database ---
     DATABASE_URL: str = "sqlite:///./smartalloc.db"

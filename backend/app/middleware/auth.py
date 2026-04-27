@@ -120,26 +120,6 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # DEV/HACKATHON MODE: bypass JWT with dev-token
-    if credentials.credentials.startswith("dev-"):
-        if credentials.credentials == "dev-vol-token":
-            # Return a volunteer user (for volunteer app)
-            from ..models import Volunteer
-            vol = db.query(Volunteer).first()
-            if vol:
-                vol_user = db.query(User).filter(User.id == vol.user_id).first()
-                if vol_user:
-                    return vol_user
-        # Default: return admin user (for admin dashboard)
-        admin = db.query(User).filter(User.role == "admin", User.is_active == True).first()
-        if admin:
-            return admin
-        # Fallback: return any active user
-        any_user = db.query(User).filter(User.is_active == True).first()
-        if any_user:
-            return any_user
-        raise HTTPException(status_code=404, detail="No users in database. Run seed_data.py first.")
-
     payload = decode_access_token(credentials.credentials)
 
     user_id = payload.get("sub")
