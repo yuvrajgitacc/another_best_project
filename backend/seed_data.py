@@ -313,6 +313,69 @@ def seed():
         all_needs.append(need)
         print(f"  Need (GJ): {title} [{cat}] urgency={urgency} status={status_val}")
 
+    # --- PAN-INDIA NEEDS (for richer map) ---
+    pan_india_needs = [
+        # Delhi
+        ("Emergency medical supplies in Chandni Chowk", "Dengue outbreak — 80+ cases. Medicines and mosquito nets urgently needed.", "medical", 5, 120, 28.6562, 77.2310, "Chandni Chowk, Delhi"),
+        ("Food packets for flood-hit Yamuna area", "500 families stranded near Yamuna banks. Need dry ration kits.", "food", 5, 500, 28.6848, 77.2405, "Yamuna Bank, Delhi"),
+        ("Shelter needed near Sarai Kale Khan", "Homeless migrants need temporary shelters. Winter approaching.", "shelter", 4, 200, 28.5891, 77.2563, "Sarai Kale Khan, Delhi"),
+        ("Water tankers for JJ Colony", "No piped water for 3 days. 1,000 residents affected.", "water", 5, 1000, 28.6289, 77.2065, "Karol Bagh, Delhi"),
+
+        # Bangalore
+        ("Medical camp needed in Whitefield", "IT corridor workers need free health checkup camp.", "medical", 2, 150, 12.9698, 77.7500, "Whitefield, Bangalore"),
+        ("Flood rescue in Bellandur", "Heavy rains causing flooding. 25 families trapped.", "rescue", 5, 80, 12.9340, 77.6780, "Bellandur, Bangalore"),
+        ("Food distribution at Majestic bus stand", "Daily wage workers need meal support.", "food", 3, 200, 12.9770, 77.5710, "Majestic, Bangalore"),
+
+        # Chennai
+        ("Cyclone relief in Marina Beach area", "Post-cyclone damage. 300 families need immediate shelter and food.", "shelter", 5, 300, 13.0500, 80.2824, "Marina Beach, Chennai"),
+        ("Water purification in Velachery", "Flood-contaminated water supply. Purification tablets needed.", "water", 4, 400, 12.9815, 80.2180, "Velachery, Chennai"),
+        ("Clothing drive for fishermen community", "Fishermen lost belongings in cyclone. Need clothes and supplies.", "clothing", 3, 150, 13.1000, 80.2870, "Royapuram, Chennai"),
+
+        # Kolkata
+        ("Medical aid in Howrah slums", "Cholera cases reported. Urgent medical response needed.", "medical", 5, 90, 22.5958, 88.2636, "Howrah, Kolkata"),
+        ("Food relief in Sundarbans", "Cyclone damaged crops. 200 families without food for 2 days.", "food", 5, 200, 22.1667, 88.8667, "Sundarbans, West Bengal"),
+        ("School rebuilding in North 24 Parganas", "Cyclone destroyed 3 schools. Need volunteers for rebuilding.", "education", 3, 500, 22.6188, 88.4273, "Barasat, West Bengal"),
+
+        # Hyderabad
+        ("Rescue operation in Musi river area", "Flash floods. 15 people stranded near old bridge.", "rescue", 5, 15, 17.3850, 78.4867, "Musi River, Hyderabad"),
+        ("Sanitation drive in Charminar area", "Post-flood cleanup needed. Disease risk high.", "sanitation", 4, 300, 17.3616, 78.4747, "Charminar, Hyderabad"),
+
+        # Jaipur
+        ("Heatwave relief camp needed", "Temperatures crossing 48°C. Need cooling stations and ORS distribution.", "medical", 4, 500, 26.9124, 75.7873, "Jaipur, Rajasthan"),
+        ("Water distribution in Jodhpur villages", "Severe drought. 5 villages without water for a week.", "water", 5, 800, 26.2389, 73.0243, "Jodhpur, Rajasthan"),
+
+        # Lucknow
+        ("Flood relief in Gomti river area", "River overflowing. 100 families displaced.", "shelter", 4, 100, 26.8467, 80.9462, "Gomti Nagar, Lucknow"),
+        ("Education kits for rural UP schools", "Post-flood schools reopening. No books or supplies.", "education", 2, 300, 26.8853, 80.9116, "Lucknow, UP"),
+
+        # Pune
+        ("Landslide rescue in Lavasa", "Heavy rains caused landslide. 10 people missing.", "rescue", 5, 10, 18.4090, 73.5056, "Lavasa, Pune"),
+        ("Food kitchen for Pune migrant workers", "Construction workers stranded without wages or food.", "food", 4, 250, 18.5204, 73.8567, "Hadapsar, Pune"),
+    ]
+
+    for i, (title, desc, cat, urgency, affected, lat, lon, addr) in enumerate(pan_india_needs):
+        status_val = statuses[i % len(statuses)]
+        need = Need(
+            id=_uuid(),
+            reported_by=admin_user.id if i % 3 == 0 else volunteers[i % len(volunteers)].user_id,
+            title=title,
+            description=desc,
+            category=cat,
+            urgency=urgency,
+            status=status_val,
+            latitude=lat + random.uniform(-0.01, 0.01),
+            longitude=lon + random.uniform(-0.01, 0.01),
+            address=addr,
+            people_affected=affected,
+            source=random.choice(["manual", "manual", "ocr"]),
+            created_at=_random_past(7),
+        )
+        if status_val == "resolved":
+            need.resolved_at = need.created_at + timedelta(hours=random.randint(2, 48))
+        db.add(need)
+        all_needs.append(need)
+        print(f"  Need (IN): {title} [{cat}] urgency={urgency} status={status_val}")
+
     # --- ASSIGNMENTS ---
     assigned_needs = [n for n in all_needs if n.status in ("assigned", "in_progress", "resolved")]
     available_vols = [v for v in volunteers if v.availability in ("available", "busy")]

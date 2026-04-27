@@ -43,19 +43,21 @@ const FinalCTA = () => {
           transition={{ duration: 0.8, delay: 0.4 }}
           style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}
         >
-          <motion.button 
+          <motion.a 
+            href="/SevaSetu.apk"
+            download="SevaSetu.apk"
             className="btn-cta-primary"
             whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(59, 130, 246, 0.6)" }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => { window.location.href = 'http://localhost:5174/'; }}
+            style={{ textDecoration: 'none', color: 'inherit' }}
           >
-            Install Volunteer App
-          </motion.button>
+            Download Volunteer App
+          </motion.a>
           <motion.button 
             className="btn-cta-secondary"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => { window.location.href = 'http://localhost:5173/'; }}
+            onClick={() => { window.open('/admin/', '_blank'); }}
           >
             Open Dashboard
           </motion.button>
